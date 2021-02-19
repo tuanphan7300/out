@@ -1,0 +1,1154 @@
+
+(function() {
+	function a(a, b) {
+		!CKEDITOR.dialog.getCurrent() && a.showNotification ? a.showNotification(b.replace(/\r\n/, "\x3cbr\x3e"), "warning") : alert(b)
+	}
+
+	function g(a) {
+		a = a.data;
+		if (/\.bmp$/.test(a.name)) {
+			var b = a.image,
+				c = document.createElement("canvas");
+			c.width = b.width;
+			c.height = b.height;
+			c.getContext("2d").drawImage(b, 0,
+				0);
+			a.file = c.toDataURL("image/png");
+			a.name = a.name.replace(/\.bmp$/, ".png")
+		}
+	}
+
+	function b(b) {
+		var c = b.editor,
+			d = c.config.simpleuploads_maximumDimensions,
+			e = b.data.image;
+		d.width && e.width > d.width ? (a(c, c.lang.simpleuploads.imageTooWide), b.cancel()) : d.height && e.height > d.height && (a(c, c.lang.simpleuploads.imageTooTall), b.cancel())
+	}
+
+	function d(a) {
+		var b = "span.SimpleUploadsTmpWrapper\x3espan { top: 50%; margin-top: -0.5em; width: 100%; text-align: center; color: #fff; text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5); font-size: 50px; font-family: Calibri,Arial,Sans-serif; pointer-events: none; position: absolute; display: inline-block;}";
+		a.simpleuploads_hideImageProgress && (b = "span.SimpleUploadsTmpWrapper { color:#333; background-color:#fff; padding:4px; border:1px solid #EEE;}");
+		return ".SimpleUploadsOverEditor { " + (a.simpleuploads_editorover || "box-shadow: 0 0 10px 1px #999999 inset !important;") + " }a.SimpleUploadsTmpWrapper { color:#333; background-color:#fff; padding:4px; border:1px solid #EEE;}.SimpleUploadsTmpWrapper { display: inline-block; position: relative; pointer-events: none;}" + b + ".uploadRect {display: inline-block;height: 0.9em;vertical-align: middle;width: 20px;}.uploadRect span {background-color: #999;display: inline-block;height: 100%;vertical-align: top;}.SimpleUploadsTmpWrapper .uploadCancel { background-color: #333333;border-radius: 0.5em;color: #FFFFFF;cursor: pointer !important;display: inline-block;height: 1em;line-height: 0.8em;margin-left: 4px;padding-left: 0.18em;pointer-events: auto;position: relative; text-decoration:none; top: -2px;width: 0.7em;}.SimpleUploadsTmpWrapper span .uploadCancel { width:1em; padding-left:0}"
+	}
+
+	function h(b, c, d, e) {
+		if (G) a(b, "Please, wait to finish the current upload");
+		else if (I = !c, C = b, "undefined" == typeof FormData) {
+			var f = document.getElementById("simpleUploadsTarget");
+			f || (f = document.createElement("iframe"), f.style.display = "none", f.id = "simpleUploadsTarget", document.body.appendChild(f));
+			F = d;
+			K = e;
+			L = c;
+			d = b._.simpleuploadsFormUploadFn;
+			e = b._.simpleuploadsFormInitFn;
+			d || (b._.simpleuploadsFormUploadFn = d = CKEDITOR.tools.addFunction(m, b), b._.simpleuploadsFormInitFn = e = CKEDITOR.tools.addFunction(function() {
+				window.setTimeout(function() {
+					var c =
+						document.getElementById("simpleUploadsTarget").contentWindow.document.getElementById(b.config.simpleuploads_inputname || "upload");
+					c.onchange = function() {
+						var c = {
+								name: this.value,
+								url: this.form.action,
+								context: F,
+								id: "IEUpload",
+								requiresImage: L
+							},
+							d = c.name.match(/\\([^\\]*)$/);
+						d && (c.name = d[1]);
+						if ("boolean" != typeof C.fire("simpleuploads.startUpload", c))
+							if (c.requiresImage && !CKEDITOR.plugins.simpleuploads.isImageExtension(C, c.name)) a(b, C.lang.simpleuploads.nonImageExtension);
+							else {
+								K && K.start && K.start(c);
+								G = this.value;
+								this.form.action = c.url;
+								if (c.extraFields) {
+									var c = c.extraFields,
+										d = this.ownerDocument,
+										e;
+									for (e in c)
+										if (c.hasOwnProperty(e)) {
+											var f = d.createElement("input");
+											f.type = "hidden";
+											f.name = e;
+											f.value = c[e];
+											this.form.appendChild(f)
+										}
+								}
+								this.form.submit()
+							}
+					};
+					c.click()
+				}, 100)
+			}, b), b.on("destroy", function() {
+				CKEDITOR.tools.removeFunction(this._.simpleuploadsFormUploadFn);
+				CKEDITOR.tools.removeFunction(this._.simpleuploadsFormInitFn)
+			}));
+			var g = b.config.simpleuploads_inputname || "upload";
+			c = 'document.open(); document.write("' + ('\x3cform method\x3d"post" enctype\x3d"multipart/form-data" action\x3d"' +
+				l(b, d, c) + '"\x3e\x3cinput type\x3d"file" name\x3d"' + g + '" id\x3d"' + g + '"\x3e\x3c/form\x3e') + '");document.close();window.parent.CKEDITOR.tools.callFunction(' + e + ");";
+			f.src = "javascript:void(function(){" + encodeURIComponent(c) + "}())";
+			f.onreadystatechange = function() {
+				"complete" == f.readyState && window.setTimeout(function() {
+					G && (a(b, "The file upload has failed"), G = null)
+				}, 100)
+			};
+			E = null
+		} else {
+			E || (E = document.createElement("input"), E.type = "file", E.style.overflow = "hidden", E.style.width = "1px", E.style.height = "1px", E.style.opacity =
+				.1, E.multiple = "multiple", E.position = "absolute", E.zIndex = 1E3, document.body.appendChild(E), E.addEventListener("change", function() {
+				var a = E.files.length;
+				if (a) {
+					C.fire("saveSnapshot");
+					for (var b = 0; b < a; b++) {
+						var c = E.files[b],
+							d = CKEDITOR.tools.extend({}, E.simpleUploadData);
+						d.file = c;
+						d.name = c.name;
+						d.originalName = d.name;
+						d.id = CKEDITOR.plugins.simpleuploads.getTimeStampId();
+						d.forceLink = I;
+						d.mode = {
+							type: "selectedFile",
+							i: b,
+							count: a
+						};
+						CKEDITOR.plugins.simpleuploads.insertSelectedFile(C, d)
+					}
+				}
+			}));
+			E.accept = c ? ".jpg, .png, .jpeg, .gif, .bmp|images/*" :
+				"";
+			E.value = "";
+			E.simpleUploadData = {
+				context: d,
+				callback: e,
+				requiresImage: c
+			};
+			if (CKEDITOR.env.webkit) {
+				var h = b.focusManager;
+				h && h.lock && (h.lock(), setTimeout(function() {
+					h.unlock()
+				}, 500))
+			}
+			E.click()
+		}
+	}
+
+	function l(a, b, c) {
+		c = c ? a.config.filebrowserImageUploadUrl : a.config.filebrowserUploadUrl;
+		return "base64" == c ? c : f(c, {
+			CKEditor: a.name,
+			CKEditorFuncNum: b,
+			langCode: a.langCode
+		})
+	}
+
+	function m(b, c) {
+		"string" == typeof c && c && !b && a(d, c);
+		var d = C;
+		d.fire("simpleuploads.endUpload", {
+			name: G,
+			ok: !!b
+		});
+		if (K) K.upload(b, c, {
+			context: F
+		}), K = G = null;
+		else {
+			if (b) {
+				var f, g;
+				I ? (f = new CKEDITOR.dom.element("a", d.document), f.setText(b.match(/\/([^\/]+)$/)[1]), g = "href") : (f = new CKEDITOR.dom.element("img", d.document), g = "src", f.on("load", function(a) {
+					a.removeListener();
+					f.removeListener("error", e);
+					//f.setAttribute("width", f.$.width);
+					//f.setAttribute("height", f.$.height);
+
+					d.fire("simpleuploads.finishedUpload", {
+						name: G,
+						element: f
+					})
+				}), f.on("error", e, null, {
+					editor: d,
+					element: f
+				}));
+				f.setAttribute(g, b);
+				f.data("cke-saved-" + g, b);
+				d.insertElement(f);
+				I && C.fire("simpleuploads.finishedUpload", {
+					name: G,
+					element: f
+				})
+			}
+			G = null
+		}
+		F = null
+	}
+
+	function f(a, b) {
+		var c = [];
+		if (!b || !a) return a;
+		for (var d in b) c.push(d + "\x3d" + encodeURIComponent(b[d]));
+		return a + (-1 != a.indexOf("?") ? "\x26" : "?") + c.join("\x26")
+	}
+
+	function c(a) {
+		return (a = a.data.$.dataTransfer) && a.types ? a.types.contains && a.types.contains("Files") && !a.types.contains("text/html") || a.types.indexOf && -1 != a.types.indexOf("Files") ? !0 : !1 : !1
+	}
+
+	function k(a, b, c, d, f) {
+		if ("span" == d.$.nodeName.toLowerCase()) {
+			var g = new CKEDITOR.dom.element("img", c.document);
+			if (b.originalNode) {
+				f =
+					b.originalNode;
+				for (var h = 0; h < f.attributes.length; h++) {
+					var k = f.attributes[h];
+					k.specified && "src" != k.name && "width" != k.name && "height" != k.name && g.setAttribute(k.name, k.value)
+				}
+				g.$.style.width = "";
+				g.$.style.height = ""
+			}
+			g.on("load", function(a) {
+				a.removeListener();
+				g.removeListener("error", e);
+				p(g, c, d, b.name)
+			});
+			g.on("error", e, null, {
+				editor: c,
+				element: d
+			});
+			g.data("cke-saved-src", a);
+			g.setAttribute("src", a);
+			d.data("cke-real-element-type", "img");
+			d.data("cke-realelement", encodeURIComponent(g.getOuterHtml()));
+			d.data("cke-real-node-type",
+				CKEDITOR.NODE_ELEMENT);
+			/\.svg$/.test(b.name) && (g.removeAllListeners(), g.replace(d), c.fire("simpleuploads.finishedUpload", {
+				name: name,
+				element: g
+			}), c.fire("updateSnapshot"))
+		} else b.originalNode ? (h = b.originalNode.cloneNode(!0), d.$.parentNode.replaceChild(h, d.$), d = new CKEDITOR.dom.element(h)) : (d.removeAttribute("id"), d.removeAttribute("class"), d.removeAttribute("contentEditable"), d.setHtml(d.getFirst().getHtml())), d.data("cke-saved-" + f, a), d.setAttribute(f, a), c.fire("simpleuploads.finishedUpload", {
+			name: b.name,
+			element: d
+		})
+	}
+
+	function e(b) {
+		var c = b.listenerData,
+			d = c.editor,
+			c = c.element;
+		b.removeListener();
+		a(d, 'Failed to load the image with the provided URL: "' + b.sender.data("cke-saved-src") + '"');
+		c.remove()
+	}
+
+	function p(a, b, c, d) {
+		0 === a.$.naturalWidth ? window.setTimeout(function() {
+			p(a, b, c, d)
+		}, 50) : (a.replace(c), /* a.setAttribute("width", a.$.naturalWidth), a.setAttribute("height", a.$.naturalHeight),*/ b.fire("simpleuploads.finishedUpload", {
+			name: d,
+			element: a
+		}), b.fire("updateSnapshot"))
+	}
+
+	function v(b, c) {
+		var d = CKEDITOR.plugins.simpleuploads.isImageExtension(b,
+			c.name),
+			e = "href",
+			f = !1;
+		!c.forceLink && d && (e = "src", f = !0);
+		c.callback && c.callback.setup(c);
+		c.url || (c.url = l(b, 2, f));
+		if (c.requiresImage && !d) return a(b, b.lang.simpleuploads.nonImageExtension), null;
+		if ("boolean" == typeof b.fire("simpleuploads.startUpload", c) || !c.url) return null;
+		if ("base64" == c.url) {
+			if ("string" == typeof c.file) return setTimeout(function() {
+				var a = c.file,
+					d = b.document.getById(c.id);
+				k(a, c, b, d, e)
+			}, 100), {};
+			var g = new FileReader;
+			g.onload = function() {
+				setTimeout(function() {
+					var a = g.result,
+						d = b.document.getById(c.id);
+					k(a, c, b, d, e)
+				}, 100)
+			};
+			g.readAsDataURL(c.file);
+			return {}
+		}
+		var h = new XMLHttpRequest;
+		if (d = h.upload) d.onprogress = function(a) {
+			x(b, c.id, a)
+		};
+		c.xhr = h;
+		h.open("POST", c.url);
+		h.onload = function() {
+			var d = c.id,
+				f = b.document.getById(d),
+				g, l;
+			x(b, d, null);
+			b.fire("updateSnapshot");
+			d = {
+				xhr: h,
+				data: c,
+				element: f
+			};
+			if ("boolean" != typeof b.fire("simpleuploads.serverResponse", d)) {
+				if ("undefined" == typeof d.url) {
+					try {
+						var m = JSON.parse(h.responseText);
+						m && m.url && (g = m.url);
+						m && m.error && m.error.message && (l = m.error.message)
+					} catch (p) {}
+					if (!g && !l) {
+						g =
+							(m = h.responseText.match(/\((?:"|')?\d+(?:"|')?,\s*("|')(.*?[^\\]?)\1(?:,\s*(.*?))?\s*\)\s*;?/)) && m[2];
+						l = m && m[3];
+						if (g) {
+							g = g.replace(/\\'/g, "'");
+							try {
+								var n = JSON.parse('{"url":"' + g + '"}');
+								n && n.url && (g = n.url)
+							} catch (q) {}
+						}
+						if (l)
+							if (n = l.match(/function\(\)\s*\{(.*)\}/)) l = new Function(n[1]);
+							else if (n = l.substring(0, 1), "'" == n || '"' == n) l = l.substring(1, l.length - 1);
+						m || (l = "Error posting the file", window.console && console.log(h.responseText))
+					}
+				} else g = d.url, l = "";
+				b.fire("simpleuploads.endUpload", {
+					name: c.name,
+					ok: !!g,
+					xhr: h,
+					data: c
+				});
+				200 != h.status && (413 == h.status ? a(b, b.lang.simpleuploads.fileTooBig) : a(b, "Error posting the file. Response status: " + h.status), window.console && console.log(h));
+				c.callback ? (!g && l && a(b, l), c.callback.upload(g, l, c)) : f && (g ? k(g, c, b, f, e) : (c.originalNode ? f.$.parentNode.replaceChild(c.originalNode, f.$) : f.remove(), l && a(b, l)), b.fire("updateSnapshot"))
+			}
+		};
+		h.onerror = function(d) {
+			a(b, "Error posting the file");
+			window.console && console.log(d);
+			(d = b.document.getById(c.id)) &&
+			(c.originalNode ? d.$.parentNode.replaceChild(c.originalNode, d.$) : d.remove());
+			b.fire("updateSnapshot")
+		};
+		h.onabort = function() {
+			if (c.callback) c.callback.upload(null, null, c);
+			else {
+				var a = b.document.getById(c.id);
+				a && (c.originalNode ? a.$.parentNode.replaceChild(c.originalNode, a.$) : a.remove());
+				b.fire("updateSnapshot")
+			}
+		};
+		h.withCredentials = !0;
+		return h
+	}
+
+	function A(a, b) {
+		if (!b.callback) {
+			var c = CKEDITOR.plugins.simpleuploads.isImageExtension(a, b.name),
+				d = !a.config.simpleuploads_hideImageProgress;
+			!b.forceLink && c && d ? c =
+				w(b.file, b.id, a) : (c = c && !b.forceLink ? new CKEDITOR.dom.element("span", a.document) : new CKEDITOR.dom.element("a", a.document), c.setAttribute("id", b.id), c.setAttribute("class", "SimpleUploadsTmpWrapper"), c.setHtml('\x3cspan class\x3d"uploadName"\x3e' + b.name + '\x3c/span\x3e \x3cspan class\x3d"uploadRect"\x3e\x3cspan id\x3d"rect' + b.id + '"\x3e\x3c/span\x3e\x3c/span\x3e \x3cspan id\x3d"text' + b.id + '" class\x3d"uploadText"\x3e \x3c/span\x3e\x3cspan class\x3d"uploadCancel"\x3ex\x3c/span\x3e'));
+			c.setAttribute("contentEditable", !1);
+			b.element = c
+		}
+		c = v(a, b);
+		if (!c) return b.result = b.result || "", !1;
+		if (!c.send) return !0;
+		b.callback && b.callback.start && b.callback.start(b);
+		d = b.inputName || a.config.simpleuploads_inputname || "upload";
+		if ("string" == typeof b.file) {
+			var e = "-----------------------------1966284435497298061834782736",
+				f = b.name.match(/\.(\w+)$/)[1],
+				e = e + ('\r\nContent-Disposition: form-data; name\x3d"' + d + '"; filename\x3d"' + b.name + '"'),
+				e = e + ("\r\nContent-type: image/" + f) + ("\r\n\r\n" + window.atob(b.file.split(",")[1])),
+				e = e + "\r\n-----------------------------1966284435497298061834782736";
+			if (b.extraFields) {
+				var f = b.extraFields,
+					g;
+				for (g in f) e += '\r\nContent-Disposition: form-data; name\x3d"' + unescape(encodeURIComponent(g)).replace(/=/g, "\\\x3d") + '"', e += "\r\n\r\n" + unescape(encodeURIComponent(f[g])), e += "\r\n-----------------------------1966284435497298061834782736"
+			}
+			e += "--";
+			c.setRequestHeader("Content-Type", "multipart/form-data; boundary\x3d---------------------------1966284435497298061834782736");
+			g = new ArrayBuffer(e.length);
+			g = new Uint8Array(g, 0);
+			for (f = 0; f < e.length; f++) g[f] = e.charCodeAt(f) &
+				255
+		} else {
+			g = new FormData;
+			g.append(d, b.file, b.name);
+			if (b.extraFields)
+				for (f in d = b.extraFields, d) d.hasOwnProperty(f) && g.append(f, d[f]);
+			if (b.extraHeaders)
+				for (e in f = b.extraHeaders, f) f.hasOwnProperty(e) && c.setRequestHeader(e, f[e])
+		}
+		c.send(g);
+		return !0
+	}
+
+	function x(a, b, c) {
+		if (a.document && a.document.$) {
+			var d = (CKEDITOR.dialog.getCurrent() ? CKEDITOR : a).document.$,
+				e = d.getElementById("rect" + b);
+			b = d.getElementById("text" + b);
+			if (c) {
+				if (!c.lengthComputable) return;
+				d = (100 * c.loaded / c.total).toFixed(2) + "%";
+				a = (100 * c.loaded /
+					c.total).toFixed() + "%"
+			} else a = a.lang.simpleuploads.processing, d = "100%";
+			e && (e.setAttribute("width", d), e.style.width = d, c || (e = e.parentNode) && "uploadRect" == e.className && e.parentNode.removeChild(e));
+			b && (b.firstChild.nodeValue = a, c || (c = b.nextSibling) && "a" == c.nodeName.toLowerCase() && c.parentNode.removeChild(c))
+		}
+	}
+
+	function w(a, b, c) {
+		var d = new CKEDITOR.dom.element("span", c.document),
+			e = d.$,
+			f, g = c.document.$;
+		c = g.createElement("span");
+		d.setAttribute("id", b);
+		d.setAttribute("class", "SimpleUploadsTmpWrapper");
+		var h =
+			g.createElement("span");
+		h.setAttribute("id", "text" + b);
+		h.appendChild(g.createTextNode("0 %"));
+		e.appendChild(c);
+		c.appendChild(h);
+		h = g.createElement("span");
+		h.appendChild(g.createTextNode("x"));
+		c.appendChild(h);
+		if ("string" != typeof a) {
+			if (!O || !O.revokeObjectURL) return d;
+			f = !0
+		}
+		c = g.createElementNS("http://www.w3.org/2000/svg", "svg");
+		c.setAttribute("id", "svg" + b);
+		h = g.createElement("img");
+		f ? (h.onload = function() {
+			this.onload && (O.revokeObjectURL(this.src), this.onload = null);
+			var a = g.getElementById("svg" + b);
+			a && (a.setAttribute("width",
+				this.width + "px"), a.setAttribute("height", this.height + "px"));
+			if (a = g.getElementById(b)) a.style.width = this.width + "px"
+		}, h.src = O.createObjectURL(a)) : (h.src = a, h.onload = function() {
+			this.onload = null;
+			var a = g.getElementById("svg" + b);
+			a && (a.setAttribute("width", this.width + "px"), a.setAttribute("height", this.height + "px"))
+		}, c.setAttribute("width", h.width + "px"), c.setAttribute("height", h.height + "px"));
+		e.appendChild(c);
+		e = g.createElementNS("http://www.w3.org/2000/svg", "filter");
+		e.setAttribute("id", "SVGdesaturate");
+		c.appendChild(e);
+		h = g.createElementNS("http://www.w3.org/2000/svg", "feColorMatrix");
+		h.setAttribute("type", "saturate");
+		h.setAttribute("values", "0");
+		e.appendChild(h);
+		e = g.createElementNS("http://www.w3.org/2000/svg", "clipPath");
+		e.setAttribute("id", "SVGprogress" + b);
+		c.appendChild(e);
+		h = g.createElementNS("http://www.w3.org/2000/svg", "rect");
+		h.setAttribute("id", "rect" + b);
+		h.setAttribute("width", "0");
+		h.setAttribute("height", "100%");
+		e.appendChild(h);
+		var k = g.createElementNS("http://www.w3.org/2000/svg", "image");
+		k.setAttribute("width",
+			"100%");
+		k.setAttribute("height", "100%");
+		if (f) {
+			k.setAttributeNS("http://www.w3.org/1999/xlink", "href", O.createObjectURL(a));
+			var l = function() {
+				O.revokeObjectURL(k.getAttributeNS("http://www.w3.org/1999/xlink", "href"));
+				k.removeEventListener("load", l, !1)
+			};
+			k.addEventListener("load", l, !1)
+		} else k.setAttributeNS("http://www.w3.org/1999/xlink", "href", a);
+		a = k.cloneNode(!0);
+		k.setAttribute("filter", "url(#SVGdesaturate)");
+		k.style.opacity = "0.5";
+		c.appendChild(k);
+		a.setAttribute("clip-path", "url(#SVGprogress" + b + ")");
+		c.appendChild(a);
+		return d
+	}
+
+	function q(a, b, c, d) {
+		if ("file" != d.type) {
+			var e = d.filebrowser,
+				g = "image" == b.substr(0, 5) || e.requiresImage,
+				k = e.target && e.target.split(":"),
+				l = {
+					targetField: k,
+					multiple: e.multiple,
+					setup: function(b) {
+						c.uploadUrl && (g && (b.requiresImage = !0), b.url = f(c.uploadUrl, {
+							CKEditor: a.name,
+							CKEditorFuncNum: 2,
+							langCode: a.langCode
+						}))
+					},
+					start: function(a) {
+						var b = CKEDITOR.dialog.getCurrent(),
+							c = a.throbber = b.showThrobber();
+						if (a.xhr) {
+							c.throbberTitle.setHtml('\x3cspan class\x3d"uploadName"\x3e' + a.name + '\x3c/span\x3e \x3cspan class\x3d"uploadRect"\x3e\x3cspan id\x3d"rect' +
+								a.id + '"\x3e\x3c/span\x3e\x3c/span\x3e \x3cspan id\x3d"text' + a.id + '" class\x3d"uploadText"\x3e \x3c/span\x3e\x3ca\x3ex\x3c/a\x3e');
+							var d = a.xhr;
+							c.timer && (clearInterval(c.timer), c.timer = null);
+							c.throbberParent.setStyle("display", "none");
+							c.throbberTitle.getLast().on("click", function() {
+								d.abort()
+							});
+							b.on("hide", function() {
+								1 == d.readyState && d.abort()
+							})
+						}
+						c.center()
+					},
+					upload: function(a, b, c) {
+						var d = CKEDITOR.dialog.getCurrent();
+						c.throbber.hide();
+						"function" == typeof b && !1 === b.call(c.context.sender) || e.onSelect && !1 ===
+						e.onSelect(a, b, c) || !a || (d.getContentElement(k[0], k[1]).setValue(a), d.selectPage(k[0]))
+					}
+				};
+			if ("QuickUpload" == e.action) c.hasQuickUpload = !0, c.onFileSelect = null, a.config.simpleuploads_respectDialogUploads || (d.label = g ? a.lang.simpleuploads.addImage : a.lang.simpleuploads.addFile, d.onClick = function(b) {
+				h(a, g, b, l);
+				return !1
+			}, c.getContents(d["for"][0]).get(d["for"][1]).hidden = !0);
+			else {
+				if (c.hasQuickUpload) return;
+				e.onSelect && (c.onFileSelect = e.onSelect)
+			}
+			a.plugins.fileDropHandler && ("QuickUpload" == e.action && (c.uploadUrl =
+				e.url), c.onShow = CKEDITOR.tools.override(c.onShow || function() {}, function(a) {
+				return function(b) {
+					c.onShow = a;
+					"function" == typeof a && a.call(this, b);
+					"QuickUpload" != e.action && c.hasQuickUpload || this.handleFileDrop || (this.handleFileDrop = !0, this.getParentEditor().plugins.fileDropHandler.addTarget(this.parts.contents, l))
+				}
+			}))
+		}
+	}
+
+	function r(a, b, c, d) {
+		for (var e in d) {
+			var f = d[e];
+			f && ("hbox" != f.type && "vbox" != f.type && "fieldset" != f.type || r(a, b, c, f.children), f.filebrowser && f.filebrowser.url && q(a, b, c, f))
+		}
+	}
+
+	function y(a, b) {
+		var c =
+			a.document.getById(b.id);
+		if (c) {
+			var d = c.$.getElementsByTagName("a");
+			if (!d || !d.length)
+				if (d = c.$.getElementsByTagName("span"), !d || !d.length) return;
+			for (c = 0; c < d.length; c++) {
+				var e = d[c];
+				"x" == e.innerHTML && (e.className = "uploadCancel", e.onclick = function() {
+					b.xhr && b.xhr.abort()
+				})
+			}
+		}
+	}
+
+	function B(a) {
+		var b = a.listenerData.editor,
+			c = a.listenerData.dialog,
+			d, e;
+		if (d = a.data && a.data.$.clipboardData || b.config.forcePasteAsPlainText && window.clipboardData)
+			if (CKEDITOR.env.gecko && b.config.forcePasteAsPlainText && 0 === d.types.length) b.on("beforePaste",
+				function(a) {
+					a.removeListener();
+					a.data.type = "html"
+				});
+			else {
+				var f = d.items || d.files;
+				if (f && f.length) {
+					if (f[0].kind)
+						for (d = 0; d < f.length; d++)
+							if (e = f[d], "string" == e.kind && ("text/html" == e.type || "text/plain" == e.type)) return;
+					for (d = 0; d < f.length; d++)
+						if (e = f[d], !e.kind || "file" == e.kind) {
+							a.data.preventDefault();
+							var g = e.getAsFile ? e.getAsFile() : e;
+							CKEDITOR.env.ie || b.config.forcePasteAsPlainText ? setTimeout(function() {
+								n(g, a)
+							}, 100) : n(g, a)
+						}
+					c && a.data.$.defaultPrevented && c.hide()
+				}
+			}
+	}
+
+	function n(a, b) {
+		var c = b.listenerData.editor,
+			d = b.listenerData.dialog,
+			e = CKEDITOR.plugins.simpleuploads.getTimeStampId();
+		CKEDITOR.plugins.simpleuploads.insertPastedFile(c, {
+			context: b.data.$,
+			name: a.name || e + ".png",
+			file: a,
+			forceLink: !1,
+			id: e,
+			mode: {
+				type: "pastedFile",
+				dialog: d
+			}
+		})
+	}
+
+	function t(a) {
+		var b = a.getFrameDocument(),
+			c = b.getBody();
+		!c || !c.$ || "true" != c.$.contentEditable && "on" != b.$.designMode ? setTimeout(function() {
+			t(a)
+		}, 100) : (c = CKEDITOR.dialog.getCurrent(), b.on("paste", B, null, {
+			dialog: c,
+			editor: c.getParentEditor()
+		}))
+	}
+	var z = {
+			elements: {
+				$: function(a) {
+					a = a.attributes;
+					if ("SimpleUploadsTmpWrapper" == (a && a["class"])) return !1
+				}
+			}
+		},
+		E, C, I, G, F, K, L, O = window.URL || window.webkitURL;
+	CKEDITOR.plugins.add("simpleuploads", {
+		requires: ["filebrowser"],
+		lang: "en,ar,cs,de,es,fr,he,hu,it,ja,ko,nl,pl,pt-br,ru,tr,zh-cn",
+		onLoad: function() {
+			CKEDITOR.addCss(d(CKEDITOR.config));
+			var a = CKEDITOR.document.getHead().append("style");
+			a.setAttribute("type", "text/css");
+			var b = ".SimpleUploadsOverContainer {" + (CKEDITOR.config.simpleuploads_containerover || "box-shadow: 0 0 10px 1px #99DD99 !important;") + "} .SimpleUploadsOverDialog {" +
+				(CKEDITOR.config.simpleuploads_dialogover || "box-shadow: 0 0 10px 4px #999999 inset !important;") + "} .SimpleUploadsOverCover {" + (CKEDITOR.config.simpleuploads_coverover || "box-shadow: 0 0 10px 4px #99DD99 !important;") + "} ",
+				b = b + ".cke_throbber {margin: 0 auto; width: 100px;} .cke_throbber div {float: left; width: 8px; height: 9px; margin-left: 2px; margin-right: 2px; font-size: 1px;} .cke_throbber .cke_throbber_1 {background-color: #737357;} .cke_throbber .cke_throbber_2 {background-color: #8f8f73;} .cke_throbber .cke_throbber_3 {background-color: #abab8f;} .cke_throbber .cke_throbber_4 {background-color: #c7c7ab;} .cke_throbber .cke_throbber_5 {background-color: #e3e3c7;} .uploadRect {display: inline-block;height: 11px;vertical-align: middle;width: 50px;} .uploadRect span {background-color: #999;display: inline-block;height: 100%;vertical-align: top;} .uploadName {display: inline-block;max-width: 180px;overflow: hidden;text-overflow: ellipsis;vertical-align: top;white-space: pre;} .uploadText {font-size:80%;} .cke_throbberMain a {cursor: pointer; font-size: 14px; font-weight:bold; padding: 4px 5px;position: absolute;right:0; text-decoration:none; top: -2px;} .cke_throbberMain {background-color: #FFF; border:1px solid #e5e5e5; padding:4px 14px 4px 4px; min-width:250px; position:absolute;}.cke_button__addfile_icon{background:url(" + this.path + "icons/addFile.png) no-repeat !important}.cke_button__addimage_icon{background:url("+this.path + "icons/addImage.png) no-repeat !important}";
+			CKEDITOR.env.ie && 11 > CKEDITOR.env.version ? a.$.styleSheet.cssText = b : a.$.innerHTML = b
+		},
+		init: function(d) {
+			var e = d.config;
+			"undefined" == typeof e.simpleuploads_imageExtensions && (e.simpleuploads_imageExtensions = "jpe?g|gif|png");
+			e.filebrowserImageUploadUrl || (e.filebrowserImageUploadUrl = e.filebrowserUploadUrl);
+			if (!e.filebrowserUploadUrl && !e.filebrowserImageUploadUrl) window.console && console.log && (console.log('The editor is missing the "config.filebrowserUploadUrl" entry to know the URL that will handle uploaded files.\r\nIt should handle the posted file as shown in Example 3: http://docs.ckeditor.com/#!/guide/dev_file_browser_api-section-example-3 \r\nMore info: http://alfonsoml.blogspot.com/2009/12/using-your-own-uploader-in-ckeditor.html'),
+				console[console.warn ? "warn" : "log"]('The "SimpleUploads" plugin now is disabled.'));
+			else if ("base64" != e.filebrowserImageUploadUrl || "undefined" != typeof FormData) {
+				d.addFeature && d.addFeature({
+					allowedContent: "img[!src,width,height];a[!href];span[id](SimpleUploadsTmpWrapper);"
+				});
+				CKEDITOR.dialog.prototype.showThrobber = function() {
+					this.throbbers || (this.throbbers = []);
+					var a = {
+						update: function() {
+							for (var a = this.throbberParent.$, b = a.childNodes, a = a.lastChild.className, c = b.length - 1; 0 < c; c--) b[c].className = b[c - 1].className;
+							b[0].className = a
+						},
+						create: function(a) {
+							var b = a.throbberCover;
+							b || (b = CKEDITOR.dom.element.createFromHtml('\x3cdiv style\x3d"background-color:rgba(255,255,255,0.95);width:100%;height:100%;top:0;left:0; position:absolute; visibility:none;z-index:100;"\x3e\x3c/div\x3e'), a.parts.close.setStyle("z-index", 101), CKEDITOR.env.ie && 9 > CKEDITOR.env.version && (b.setStyle("zoom", 1), b.setStyle("filter", "progid:DXImageTransform.Microsoft.gradient(startColorstr\x3d#EEFFFFFF,endColorstr\x3d#EEFFFFFF)")), b.appendTo(a.parts.dialog),
+								a.throbberCover = b);
+							this.dialog = a;
+							var c = new CKEDITOR.dom.element("div");
+							this.mainThrobber = c;
+							var d = new CKEDITOR.dom.element("div");
+							this.throbberParent = d;
+							var e = new CKEDITOR.dom.element("div");
+							this.throbberTitle = e;
+							b.append(c).addClass("cke_throbberMain");
+							c.append(e).addClass("cke_throbberTitle");
+							c.append(d).addClass("cke_throbber");
+							for (b = [1, 2, 3, 4, 5, 4, 3, 2]; 0 < b.length;) d.append(new CKEDITOR.dom.element("div")).addClass("cke_throbber_" + b.shift());
+							this.center();
+							a.on("hide", this.hide, this)
+						},
+						center: function() {
+							var a =
+								this.mainThrobber;
+							a.setStyle("left", ((this.dialog.throbberCover.$.offsetWidth - a.$.offsetWidth) / 2).toFixed() + "px");
+							this.centerVertical(this.dialog)
+						},
+						centerVertical: function(a) {
+							var b = a.throbberCover;
+							a = a.throbbers;
+							var c = 0,
+								d;
+							for (d = 0; d < a.length; d++) c += a[d].mainThrobber.$.offsetHeight;
+							b = (b.$.offsetHeight - c) / 2;
+							for (d = 0; d < a.length; d++) a[d].mainThrobber.setStyle("top", b.toFixed() + "px"), b += a[d].mainThrobber.$.offsetHeight
+						},
+						show: function() {
+							this.create(CKEDITOR.dialog.getCurrent());
+							this.dialog.throbberCover.setStyle("visibility",
+								"");
+							this.timer = setInterval(CKEDITOR.tools.bind(this.update, this), 100)
+						},
+						hide: function() {
+							this.timer && (clearInterval(this.timer), this.timer = null);
+							var a = this.dialog;
+							if (a) {
+								this.dialog = null;
+								this.mainThrobber.remove();
+								for (var b = 0; b < a.throbbers.length; b++)
+									if (a.throbbers[b] == this) {
+										a.throbbers.splice(b, 1);
+										break
+									}
+								a.throbberCover && (0 < a.throbbers.length ? this.centerVertical(a) : a.throbberCover.setStyle("visibility", "hidden"))
+							}
+						}
+					};
+					this.throbbers.push(a);
+					a.show();
+					return a
+				};
+				d.on("simpleuploads.startUpload", function(b) {
+					var c =
+							b.editor,
+						d = c.config,
+						e = b.data && b.data.file;
+					d.simpleuploads_maxFileSize && e && e.size && e.size > d.simpleuploads_maxFileSize && (a(c, c.lang.simpleuploads.fileTooBig), b.cancel());
+					e = b.data.name;
+					d.simpleuploads_invalidExtensions && (new RegExp(".(?:" + d.simpleuploads_invalidExtensions + ")$", "i")).test(e) && (a(c, c.lang.simpleuploads.invalidExtension), b.cancel());
+					d.simpleuploads_acceptedExtensions && !(new RegExp(".(?:" + d.simpleuploads_acceptedExtensions + ")$", "i")).test(e) && (d = c.lang.simpleuploads.nonAcceptedExtension.replace("%0",
+						d.simpleuploads_acceptedExtensions), a(c, d), b.cancel())
+				});
+				d.on("simpleuploads.startUpload", function(a) {
+					var b = a.data,
+						c = a.editor;
+					if (!b.image && !b.forceLink && CKEDITOR.plugins.simpleuploads.isImageExtension(c, b.name) && b.mode && b.mode.type && c.hasListeners("simpleuploads.localImageReady")) {
+						a.cancel();
+						"base64paste" == b.mode.type && (a = CKEDITOR.plugins.simpleuploads.getTimeStampId(), b.result = '\x3cspan id\x3d"' + a + '" class\x3d"SimpleUploadsTmpWrapper" style\x3d"display:none"\x3e\x26nbsp;\x3c/span\x3e', b.mode.id =
+							a);
+						var d = new Image;
+						d.onload = function() {
+							var a = CKEDITOR.tools.extend({}, b);
+							a.image = d;
+							"boolean" != typeof c.fire("simpleuploads.localImageReady", a) && CKEDITOR.plugins.simpleuploads.insertProcessedFile(c, a)
+						};
+						d.src = "string" == typeof b.file ? b.file : O.createObjectURL(b.file)
+					}
+				});
+				if (e.simpleuploads_convertBmp) d.on("simpleuploads.localImageReady", g);
+				if (e.simpleuploads_maximumDimensions) d.on("simpleuploads.localImageReady", b);
+				d.on("simpleuploads.finishedUpload", function(a) {
+					if (d.widgets && d.plugins.image2 && (a = a.data.element,
+					"img" == a.getName())) {
+						var b = d.widgets.getByElement(a);
+						b ? (b.data.src = a.data("cke-saved-src"), b.data.width = a.$.width, b.data.height = a.$.height) : (d.widgets.initOn(a, "image2"), d.widgets.initOn(a, "image"))
+					}
+				});
+				d.on("paste", function(b) {
+					var c = b.data;
+					if (c = c.html || c.type && "html" == c.type && c.dataValue) CKEDITOR.env.webkit && 0 < c.indexOf("webkit-fake-url") && (a(d, "Sorry, the images pasted with Safari aren't usable"), window.open("https://bugs.webkit.org/show_bug.cgi?id\x3d49141"), c = c.replace(/<img src="webkit-fake-url:.*?">/g,
+						"")), c = c.replace(/<img(.*?) src="data:image\/.{3,4};base64,.*?"(.*?)>/g, function(a) {
+						if (!d.config.filebrowserImageUploadUrl) return "";
+						var b = a.match(/"(data:image\/(.{3,4});base64,.*?)"/),
+							c = b[1],
+							b = b[2].toLowerCase(),
+							e = CKEDITOR.plugins.simpleuploads.getTimeStampId();
+						if (128 > c.length) return a;
+						"jpeg" == b && (b = "jpg");
+						var f = {
+							context: "pastedimage",
+							name: e + "." + b,
+							id: e,
+							forceLink: !1,
+							file: c,
+							mode: {
+								type: "base64paste"
+							}
+						};
+						if (!A(d, f)) return f.result;
+						a = f.element;
+						var g = a.$.innerHTML;
+						a.$.innerHTML = "\x26nbsp;";
+						d.on("afterPaste",
+							function(a) {
+								a.removeListener();
+								if (a = d.document.$.getElementById(e)) a.innerHTML = g, y(d, f)
+							});
+						return a.getOuterHtml()
+					}), b.data.html ? b.data.html = c : b.data.dataValue = c
+				});
+				var e = function(a) {
+						"wysiwyg" == d.mode && d.editable().$.querySelector(".SimpleUploadsTmpWrapper") && (a = a.name.substr(5).toLowerCase(), "redo" == a && d.getCommand(a).state == CKEDITOR.TRISTATE_DISABLED && (a = "undo"), d.execCommand(a))
+					},
+					f = d.getCommand("undo");
+				if (f) f.on("afterUndo", e);
+				if (f = d.getCommand("redo")) d.getCommand("redo").on("afterRedo", e);
+				d.on("afterUndo",
+					e);
+				d.on("afterRedo", e);
+				d.addCommand("addFile", {
+					exec: function(a) {
+						h(a, !1, this)
+					}
+				});
+				d.ui.addButton("addFile", {
+					label: d.lang.simpleuploads.addFile,
+					command: "addFile",
+					toolbar: "insert",
+					allowedContent: "a[!href];span[id](SimpleUploadsTmpWrapper);",
+					requiredContent: "a[href]"
+				});
+				d.addCommand("addImage", {
+					exec: function(a) {
+						h(a, !0, this)
+					}
+				});
+				d.ui.addButton("addImage", {
+					label: d.lang.simpleuploads.addImage,
+					command: "addImage",
+					toolbar: "insert",
+					allowedContent: "img[!src,width,height];span[id](SimpleUploadsTmpWrapper);",
+					requiredContent: "img[src]"
+				});
+				if ("undefined" != typeof FormData) {
+					var k, l, m, p = -1,
+						n, q, r, t = -1,
+						v, w, x, z = function() {
+							var a = CKEDITOR.dialog.getCurrent();
+							a ? a.parts.title.getParent().removeClass("SimpleUploadsOverCover") : d.container.removeClass("SimpleUploadsOverContainer")
+						};
+					d.on("destroy", function() {
+						CKEDITOR.removeListener("simpleuploads.droppedFile", z);
+						CKEDITOR.document.removeListener("dragenter", E);
+						CKEDITOR.document.removeListener("dragleave", F);
+						C()
+					});
+					var C = function() {
+						k && k.removeListener && (m.removeListener("paste", B), k.removeListener("dragenter",
+							I), k.removeListener("dragleave", K), k.removeListener("dragover", L), k.removeListener("drop", G), l = k = m = null)
+					};
+					CKEDITOR.on("simpleuploads.droppedFile", z);
+					var E = function(a) {
+							if (-1 == t && c(a)) {
+								if (a = CKEDITOR.dialog.getCurrent()) {
+									if (!a.handleFileDrop) return;
+									a.parts.title.getParent().addClass("SimpleUploadsOverCover")
+								} else d.readOnly || d.container.addClass("SimpleUploadsOverContainer");
+								v = t = 0;
+								w = CKEDITOR.document.$.body.parentNode.clientWidth;
+								x = CKEDITOR.document.$.body.parentNode.clientHeight
+							}
+						},
+						F = function(a) {
+							-1 !=
+							t && (a = a.data.$, a.clientX <= t || a.clientY <= v || a.clientX >= w || a.clientY >= x) && (z(), t = -1)
+						};
+					CKEDITOR.document.on("dragenter", E);
+					CKEDITOR.document.on("dragleave", F);
+					CKEDITOR.document.on("dragover", function(a) {
+						if (!d.config.simpleuploads_allowDropOutside && c(a) && "copy" != a.data.$.dataTransfer.dropEffect) return a.data.$.dataTransfer.dropEffect = "none", a.data.preventDefault(), !1
+					});
+					var G = function(a) {
+							l.removeClass("SimpleUploadsOverEditor");
+							p = -1;
+							CKEDITOR.fire("simpleuploads.droppedFile");
+							t = -1;
+							if (d.readOnly) return a.data.preventDefault(), !1;
+							var b = a.data.$,
+								c = b.dataTransfer;
+							if (c && c.files && 0 < c.files.length) {
+								d.fire("saveSnapshot");
+								a.data.preventDefault();
+								a = {
+									ev: b,
+									range: !1,
+									count: c.files.length,
+									rangeParent: b.rangeParent,
+									rangeOffset: b.rangeOffset
+								};
+								if (!a.rangeParent && !document.caretRangeFromPoint && "img" != b.target.nodeName.toLowerCase()) {
+									var e = d.document.$;
+									if (e.body.createTextRange) {
+										e = e.body.createTextRange();
+										try {
+											e.moveToPoint(b.clientX, b.clientY), a.range = e
+										} catch (f) {}
+									}
+								}
+								for (e = 0; e < c.files.length; e++) {
+									var g = c.files[e],
+										h = CKEDITOR.tools.getNextId();
+									CKEDITOR.plugins.simpleuploads.insertDroppedFile(d, {
+										context: b,
+										name: g.name,
+										file: g,
+										forceLink: b.shiftKey,
+										id: h,
+										mode: {
+											type: "droppedFile",
+											dropLocation: a
+										}
+									})
+								}
+							}
+						},
+						I = function(a) {
+							-1 == p && c(a) && (d.readOnly || l.addClass("SimpleUploadsOverEditor"), a = l.$.getBoundingClientRect(), p = a.left, n = a.top, q = p + l.$.clientWidth, r = n + l.$.clientHeight)
+						},
+						K = function(a) {
+							-1 != p && (a = a.data.$, a.clientX <= p || a.clientY <= n || a.clientX >= q || a.clientY >= r) && (l.removeClass("SimpleUploadsOverEditor"), p = -1)
+						},
+						L = function(a) {
+							if (-1 != p) {
+								if (d.readOnly) return a.data.$.dataTransfer.dropEffect =
+									"none", a.data.preventDefault(), !1;
+								a.data.$.dataTransfer.dropEffect = "copy";
+								CKEDITOR.env.gecko || a.data.preventDefault()
+							}
+						};
+					d.on("contentDom", function() {
+						k = d.document;
+						l = k.getBody().getParent();
+						3 == d.elementMode && (l = k = d.editable());
+						1 == d.elementMode && "divarea" in d.plugins && (l = k = d.editable());
+						m = d.editable();
+						if (CKEDITOR.env.ie && 11 <= CKEDITOR.env.version && d.config.forcePasteAsPlainText && d.editable().isInline()) m.attachListener(m, "beforepaste", function() {
+							d.document.on("paste", function(a) {
+									a.removeListener();
+									B(a)
+								},
+								null, {
+									editor: d
+								})
+						});
+						else m.on("paste", B, null, {
+							editor: d
+						}, 8);
+						k.on("dragenter", I);
+						k.on("dragleave", K);
+						k.on("dragover", L);
+						k.on("drop", G)
+					});
+					d.on("contentDomUnload", C);
+					d.plugins.fileDropHandler = {
+						addTarget: function(a, b) {
+							a.on("dragenter", function(b) {
+								-1 == p && c(b) && (a.addClass("SimpleUploadsOverDialog"), b = a.$.getBoundingClientRect(), p = b.left, n = b.top, q = p + a.$.clientWidth, r = n + a.$.clientHeight)
+							});
+							a.on("dragleave", function(b) {
+								-1 != p && (b = b.data.$, b.clientX <= p || b.clientY <= n || b.clientX >= q || b.clientY >= r) && (a.removeClass("SimpleUploadsOverDialog"),
+									p = -1)
+							});
+							a.on("dragover", function(a) {
+								-1 != p && (a.data.$.dataTransfer.dropEffect = "copy", a.data.preventDefault(!0))
+							});
+							a.on("drop", function(c) {
+								a.removeClass("SimpleUploadsOverDialog");
+								p = -1;
+								CKEDITOR.fire("simpleuploads.droppedFile");
+								t = -1;
+								var e = c.data.$,
+									f = e.dataTransfer;
+								if (f && f.files && 0 < f.files.length) {
+									c.data.preventDefault();
+									c = 1;
+									b.multiple && (c = f.files.length);
+									for (var g = 0; g < c; g++) {
+										var h = f.files[g],
+											h = {
+												context: e,
+												name: h.name,
+												file: h,
+												id: CKEDITOR.tools.getNextId(),
+												forceLink: !1,
+												callback: b,
+												mode: {
+													type: "callback"
+												}
+											};
+										CKEDITOR.plugins.simpleuploads.processFileWithCallback(d, h)
+									}
+								}
+							})
+						}
+					}
+				}
+			}
+		},
+		afterInit: function(a) {
+			(a = (a = a.dataProcessor) && a.htmlFilter) && a.addRules(z, {
+				applyToAll: !0
+			})
+		}
+	});
+	CKEDITOR.plugins.simpleuploads = {
+		getTimeStampId: function() {
+			var a = 0;
+			return function() {
+				a++;
+				return (new Date).toISOString().replace(/\..*/, "").replace(/\D/g, "_") + a
+			}
+		}(),
+		isImageExtension: function(a, b) {
+			return a.config.simpleuploads_imageExtensions ? (new RegExp(".(?:" + a.config.simpleuploads_imageExtensions + ")$", "i")).test(b) : !1
+		},
+		insertProcessedFile: function(b,
+									  c) {
+			c.element = null;
+			c.id = this.getTimeStampId();
+			var d = this;
+			switch (c.mode.type) {
+				case "selectedFile":
+					window.setTimeout(function() {
+						d.insertSelectedFile(b, c)
+					}, 50);
+					break;
+				case "pastedFile":
+					this.insertPastedFile(b, c);
+					break;
+				case "callback":
+					window.setTimeout(function() {
+						d.processFileWithCallback(b, c)
+					}, 50);
+					break;
+				case "droppedFile":
+					this.insertDroppedFile(b, c);
+					break;
+				case "base64paste":
+					this.insertBase64File(b, c);
+					break;
+				default:
+					a(b, "Error, no valid type in callback " + c.mode)
+			}
+		},
+		insertSelectedFile: function(a, b) {
+			var c =
+					b.mode,
+				d = c.i,
+				e = c.count;
+			if (A(a, b) && (c = b.element)) {
+				if (1 == e) {
+					var f = a.getSelection(),
+						e = f.getSelectedElement(),
+						g;
+					e && "img" == e.getName() && "span" == c.getName() && (g = e.$);
+					if (a.widgets) {
+						var h = a.widgets.focused;
+						h && h.wrapper.equals(e) && (g = e.$.querySelector("img"))
+					}
+					if ("a" == c.getName()) {
+						var h = e,
+							k = f.getRanges(),
+							f = k && k[0];
+						!h && k && 1 == k.length && (h = f.startContainer.$, h.nodeType == document.TEXT_NODE && (h = h.parentNode));
+						for (; h && h.nodeType == document.ELEMENT_NODE && "a" != h.nodeName.toLowerCase();) h = h.parentNode;
+						h && h.nodeName &&
+						"a" == h.nodeName.toLowerCase() && (g = h);
+						g || !f || !e && f.collapsed || (g = new CKEDITOR.style({
+							element: "a",
+							attributes: {
+								href: "#"
+							}
+						}), g.type = CKEDITOR.STYLE_INLINE, g.applyToRange(f), h = f.startContainer.$, h.nodeType == document.TEXT_NODE && (h = h.parentNode), g = h)
+					}
+					if (g) {
+						g.parentNode.replaceChild(c.$, g);
+						b.originalNode = g;
+						a.fire("saveSnapshot");
+						return
+					}
+				}
+				0 < d && "a" == c.getName() && a.insertHtml("\x26nbsp;");
+				a.insertElement(c);
+				y(a, b)
+			}
+		},
+		insertPastedFile: function(a, b) {
+			if (A(a, b)) {
+				var c = b.element;
+				if (b.mode.dialog) a.fire("updateSnapshot"),
+					a.insertElement(c), a.fire("updateSnapshot");
+				else {
+					var d = function() {
+						a.getSelection().getRanges().length ? a.editable().$.querySelector("#cke_pastebin") ? window.setTimeout(d, 0) : (a.fire("updateSnapshot"), a.insertElement(c), a.fire("updateSnapshot"), y(a, b)) : window.setTimeout(d, 0)
+					};
+					window.setTimeout(d, 0)
+				}
+			}
+		},
+		processFileWithCallback: function(a, b) {
+			A(a, b)
+		},
+		insertDroppedFile: function(a, b) {
+			if (A(a, b)) {
+				var c = b.element,
+					d = b.mode.dropLocation,
+					e = d.range,
+					f = d.ev,
+					g = d.count;
+				e && "a" == c.getName() && (e.pasteHTML ? e.pasteHTML("\x26nbsp;") :
+					e.insertNode(a.document.$.createTextNode(" ")));
+				var h = f.target;
+				if (!e) {
+					var k = a.document.$;
+					if (d.rangeParent) {
+						var f = d.rangeParent,
+							l = d.rangeOffset,
+							e = k.createRange();
+						e.setStart(f, l);
+						e.collapse(!0)
+					} else if (document.caretRangeFromPoint) e = k.caretRangeFromPoint(f.clientX, f.clientY);
+					else if ("img" == h.nodeName.toLowerCase()) e = k.createRange(), e.selectNode(h);
+					else if (document.body.createTextRange) {
+						l = k.body.createTextRange();
+						try {
+							l.moveToPoint(f.clientX, f.clientY), e = l
+						} catch (m) {
+							e = k.createRange(), e.setStartAfter(k.body.lastChild),
+								e.collapse(!0)
+						}
+					}
+					d.range = e
+				}
+				k = c.getName();
+				d = !1;
+				if (1 == g && ("img" == h.nodeName.toLowerCase() && "span" == k && (h.parentNode.replaceChild(c.$, h), b.originalNode = h, d = !0), "a" == k)) {
+					e.startContainer ? (g = e.startContainer, g.nodeType == document.TEXT_NODE ? g = g.parentNode : e.startOffset < g.childNodes.length && (g = g.childNodes[e.startOffset])) : g = e.parentElement();
+					g && "img" != h.nodeName.toLowerCase() || (g = h);
+					for (h = g; h && h.nodeType == document.ELEMENT_NODE && "a" != h.nodeName.toLowerCase();) h = h.parentNode;
+					h && h.nodeName && "a" == h.nodeName.toLowerCase() &&
+					(h.parentNode.replaceChild(c.$, h), b.originalNode = h, d = !0);
+					d || "img" != g.nodeName.toLowerCase() || (h = g.ownerDocument.createElement("a"), h.href = "#", g.parentNode.replaceChild(h, g), h.appendChild(g), h.parentNode.replaceChild(c.$, h), b.originalNode = h, d = !0)
+				}
+				d || (e ? e.pasteHTML ? e.pasteHTML(c.$.outerHTML) : e.insertNode(c.$) : a.insertElement(c));
+				y(a, b);
+				a.fire("saveSnapshot")
+			}
+		},
+		insertBase64File: function(a, b) {
+			delete b.result;
+			var c = a.document.getById(b.mode.id);
+			A(a, b) ? (a.getSelection().selectElement(c), a.insertElement(b.element),
+				y(a, b)) : (c.remove(), b.result && a.insertHTML(b.result))
+		}
+	};
+	CKEDITOR.on("dialogDefinition", function(a) {
+		if (a.editor.plugins.simpleuploads) {
+			var b = a.data.definition,
+				c;
+			for (c in b.contents) {
+				var d = b.contents[c];
+				d && r(a.editor, a.data.name, b, d.elements)
+			}
+			"paste" == a.data.name && (b.onShow = CKEDITOR.tools.override(b.onShow, function(a) {
+				return function() {
+					"function" == typeof a && a.call(this);
+					t(this.getContentElement("general", "editing_area").getInputElement())
+				}
+			}))
+		}
+	}, null, null, 30)
+})();

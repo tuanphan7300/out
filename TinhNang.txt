@@ -1,0 +1,246 @@
+
+            'fields[startTime]': {
+                required:true,
+                dateVN: {
+                    lte: 'fields[endTime]',
+                    lteMessage: 'Ngày bắt đầu không được lớn hơn ngày kết thúc'
+                }
+            },
+
+
+<style>
+    thead tr th {
+        text-align: center;
+        white-space: nowrap;
+        text-overflow: clip;
+    }
+</style>
+
+
+regex:/^[A-Za-z0-9_\. ]{0,21}$/,
+
+
+<script>
+    VHV.using({
+        delayReload: 2500,
+        rules: {
+            "fields[code]" : {
+                required : true,
+                regex:/^[A-Za-z0-9_\.]{0,21}$/,
+                maxlength: 20
+            },
+            "fields[title]" : {
+                required : true,
+                maxlength: 255
+            }
+        },
+        messages: {
+            "fields[code]" : {
+                required : "{'Bạn chưa nhập mã'}",
+                regex: "{'Mã không đúng định dạng'}",
+                maxlength: "{'Bạn nhập quá 20 ký tự'}"
+            },
+            "fields[title]" : {
+                required : "{'Bạn chưa nhập lý do kỷ luật'}",
+                maxlength: "{'Bạn nhập quá 255 ký tự'}"
+            }
+        }
+        ,success: function(response) {
+            if(typeof(response) == 'string') {
+                response = JSON.parse(response);
+            }
+            if (response.status == 'SUCCESS')
+            {
+                VHV.alert(response.message ? response.message : "{'Lưu thành công.'}", {
+                    type: 'success',
+                    delay: 3000
+                });
+                $('[data-dismiss="modal"]').click();
+                setTimeout(function () {
+                    var gridModuleParentId = '{quote(module()->gridModuleParentId)}';
+                    if(gridModuleParentId && VHV.App.modules[gridModuleParentId]){
+                        setTimeout(function(){
+                            VHV.App.modules[gridModuleParentId].reload('current');
+                        },1000);
+                    }
+                }, 2000);
+            }else{
+                VHV.alert(response.message ? response.message : "{'Có lỗi xảy ra vui lòng thử lại sau.'}", {
+                    type: 'error',
+                    delay: 3000
+                });
+            }
+        }
+    });
+</script>
+
+regex:/^[A-Za-z0-9]+$/,
+regex : "{'Mã không được chứ ký tự tiếng Việt có dấu, ký tự space'}",
+
+mã tự sinh:
+protected function prepareEdit(&$fields, &$oldItem, &$return)
+    {
+        if(empty($oldItem['code']) and empty($fields['code'])){
+            $code = 'PRI';
+            $fields['code'] = $code . str_pad(Data(static::$type)->autoCode(static::$type, $code), 6, '0', STR_PAD_LEFT);
+        }
+        return parent::prepareEdit($fields, $oldItem, $return);
+    }
+
+protected function prepareEdit(&$fields, &$oldItem, &$return)
+    {
+        if (!empty($fields['code']) and Data(static::$type)->selectAll(array(
+                'code' => trim(preg_replace('/\s+/','', $fields['code']))
+            ))) {
+            $return['message'] = 'Mã đã tồn tại';
+
+            return false;
+        }
+
+        return parent::prepareEdit($fields, $oldItem, $return);
+    }
+<Layout.label label="File đính kèm">
+                <input type="Form.Uploadify" allowChangeURL="0" name="file" fileExt="*.pdf;*.doc;*.docx;*.xls;*.xlsx;*.ppt;*.pptx;*.zip;*.7zip;*.rar;" multipleUpload="0" value="{!empty(file)?file:''}"/>
+            </Layout.label>
+
+
+
+
+protected function prepareEdit(&$fields, &$oldItem, &$return){
+        if(empty($oldItem)){
+            if(empty($fields['groupId'])){
+                $fields['groupId'] = CUser::$group['id'];
+            }
+            if (!empty($fields['groupCode']) and Data(static::$type)->fields('_id,groupCode')->select(array(
+                    'groupCode' => $fields['groupCode']
+                ))) {
+                $return = array(
+                    'status' => 'FAIL_CODE',
+                    'message' => lang('Mã tập thể đã tồn tại')
+                );
+                return false;
+            }
+        }
+        if(!empty($oldItem)) {
+            if (!empty($fields['groupCode']) and !empty($fields['groupCode'])
+                and $oldItem['groupCode'] != $fields['groupCode']
+                and Data(static::$type)->fields('_id,groupCode')->select(array(
+                    'groupCode' => $fields['groupCode']
+                ))
+            ) {
+                $return['message'] = lang('Tên phòng ban đã tồn tại');
+                return false;
+
+            }
+        }
+        if(!empty($fields['employeeCode'])) {
+	        $checkCode = array(
+	        	'site' => intval(portal()->id),
+		        'groupCode' => $fields['groupCode'],
+	        );
+	        if(!empty($oldItem)) {
+		        $checkCode['_id'] = array(
+		        	'$ne' => Data::objectId($oldItem['id'])
+		        );
+	        }
+	        if(Data(static::$type)->select($checkCode)) {
+	        	$return['message'] = lang('Mã đơn vị đã tồn tại');
+	        	return false;
+	        }
+        }
+        if(empty($fields['components'])) {
+            $fields['components'] = array();
+            if(!empty($oldItem)
+                and !empty($oldItem['components'])
+            ) {
+                $fields['components'] = $oldItem['components'];
+            }
+            $fields['components'][] = '5ec349c81207d93f993dfdf2'; //Tập thể
+            $fields['components'] = array_filter(array_unique($fields['components']));
+        }
+        $fields['suggestAddress'] = $fields['address'].' '.$this->covertVn($fields['address']);
+        return parent::prepareEdit($fields, $oldItem, $return);
+    }
+
+<td>{(!empty(items.statusSocial) && items.statusSocial == 1) ? '<i class="fa fa-check text-green" aria-hidden="true"></i>':'<i class="fa fa-times text-red"></i>'}</td>
+
+
+protected function prepareFilters(&$filters)
+    {
+        parent::prepareFilters($filters);
+        $filters['groupId'] = CUser::$group['id'];
+    }
+
+<Layout.label label="Đơn vị">
+                        <input type="text" name="fields[groupId]" class="select-text form-control" service="Software.Group.selectList" filters[status]="1" filters[notCMS]="1"  description="Chọn đơn vị" value="{!empty(groupId) ?quote(Data('Group')->getTitle(groupId, 'title')) : ''}" readonly>
+                    </Layout.label>
+
+<script>
+    VHV.using({
+        employeeId: {json_encode(!empty(employeeId)?employeeId:request('employeeId'))},
+    });
+</script>
+input[type=number]::-webkit-inner-spin-button, 
+input[type=number]::-webkit-outer-spin-button { 
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    margin: 0; 
+}
+// xuatexcel filter
+        $filters = !empty($filters) ? $filters : array();
+        $options = !empty($options) ? $options : array();
+        $filters['site'] = intval(portal()->id);
+        $options['itemsPerPage'] = !empty($options['itemsPerPage'])? $options['itemsPerPage']: 100000;
+        $options['pageNo'] = !empty($options['pageNo'])? $options['pageNo']: 1;
+        if($data = $this->selectAll($filters,$options)) {
+            require_once 'vendor/autoload.php';
+
+//vd trait
+trait Sharable {
+
+    public function share($item)
+    {
+		$a = 'helloword';
+        return $a;
+    }
+}
+
+class Post {
+    use Sharable;
+}
+
+class Comment {
+    use Sharable;
+}
+$post = new Post;
+echo $post->share('');
+echo '</br>';
+$comment = new Comment;
+echo $comment->share('');
+https://toidicode.com/traits-trong-php-108.html
+
+//thời tròn 1 tháng sau
+<input class="form-control" type="Form.DatePicker" name="fields[endTime]" description="{'Lựa chọn'}" minDate="{date('d/m/Y', time()+ (30*86400))}" value="{!empty(endTime) ?quote(endTime) : date('d/m/Y', time() + (30*86400))}">
+
+//validate 
+static $requiredFields = array('code','title','breakForm');
+
+//format number thoundsan
+
+<input class="form-control number" name="fields[num]" value="{!empty(num)?quote(num):''}">
+
+<script>
+    $('input.number').keyup(function(event) {
+
+        if(event.which >= 37 && event.which <= 40) return;
+
+        $(this).val(function(index, value) {
+            return value
+                .replace(/\D/g, "")
+                .replace(/\B(?=(\d{3})+(?!\d))/g, ".")
+                ;
+        });
+    });
+</script>
+

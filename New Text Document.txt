@@ -1,0 +1,11 @@
+First install Tortoisesvn. During installation follow this steps
+
+1.Run the the TortoiseSVN Installer.
+
+2.Select the option to Modify.
+
+3.select the check box "Install Command line client tools on to the local harddrive".
+
+4.Add C:\Program Files\TortoiseSVN\bin to your Path environment variable or press CTRL+ALT+S in android studio. Then go to "Version Control"-> Subversion -> General -> Check the Checkbox "use commmand line client" and set the path to C:\Program Files\TortoiseSVN\bin\svn.exe
+
+5.Restart IntelliJ.

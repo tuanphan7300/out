@@ -1,0 +1,1755 @@
+(function() {
+	function c(c) {
+		var a = c.HTMLCanvasElement && c.HTMLCanvasElement.prototype,
+			b = c.Blob && c.ArrayBuffer && c.Uint8Array && function(a) {
+				var b, c, e;
+				b = a.split(",")[0].indexOf("base64") >= 0 ? atob(a.split(",")[1]) : decodeURIComponent(a.split(",")[1]);
+				c = new ArrayBuffer(b.length);
+				c = new Uint8Array(c);
+				for (e = 0; e < b.length; e = e + 1) c[e] = b.charCodeAt(e);
+				a = a.split(",")[0].split(":")[1].split(";")[0];
+				return new Blob([c], {
+					type: a
+				})
+			};
+		if (a && !a.toBlob) {
+			if (a.msToBlob) a.toBlob = function(a) {
+				a(this.msToBlob())
+			};
+			if (a.toDataURL && b) a.toBlob = function(a, c, f) {
+				a(b(this.toDataURL(c, f)))
+			}
+		}
+	}
+
+	function g(c, a) {
+		if (c.widgets) {
+			var b = c.widgets.focused;
+			if (b && b.name == "image") {
+				b = b.element;
+				if (!b) return null;
+				if (b.getName() == "img") return b;
+				b = b.getElementsByTag("img");
+				return b.count() == 1 ? b.getItem(0) : null
+			}
+		}
+		return !a || !a.is("img") || a.data && a.data("cke-realelement") || a.isReadOnly() ? null : a
+	}
+	CKEDITOR.plugins.imagemaps = {
+		drawMap: function(c, a, b, d) {
+			if (!CKEDITOR.env.ie ||
+				d.plugins.image2 && !(CKEDITOR.env.version < 9))
+				if (c.width) {
+					if (!b) {
+						if (c.attributes["data-cke-saved-src"]) {
+							var g = new Image;
+							g.width = c.width;
+							g.height = c.height;
+							g.onload = function() {
+								CKEDITOR.plugins.imagemaps.drawMap(c, a, g, d)
+							};
+							g.src = c.attributes["data-cke-saved-src"].value;
+							return
+						}
+						b = c
+					}
+					var f = c.ownerDocument.createElement("canvas"),
+						h = f.getContext("2d");
+					f.setAttribute("width", c.width);
+					f.setAttribute("height", c.height);
+					h.drawImage(b, 0, 0, c.width, c.height);
+					h.strokeStyle = "#DDDDDD";
+					h.lineWidth = 1;
+					h.shadowOffsetX = 0;
+					h.shadowOffsetY =
+						0;
+					h.shadowBlur = 3;
+					h.shadowColor = "#333333";
+					for (b = 0; b < a.areas.length; b++) {
+						var k = a.areas[b],
+							j = k.coords.split(",");
+						switch (k.shape) {
+							case "circle":
+								h.beginPath();
+								h.arc(j[0], j[1], j[2], 0, Math.PI * 2, true);
+								h.closePath();
+								h.stroke();
+								break;
+							case "poly":
+								h.beginPath();
+								h.moveTo(j[0], j[1]);
+								for (k = 2; k < j.length; k = k + 2) h.lineTo(j[k], j[k + 1]);
+								h.closePath();
+								h.stroke();
+								break;
+							default:
+								h.strokeRect(j[0], j[1], j[2] - j[0], j[3] - j[1])
+						}
+					}
+					var l = d.checkDirty();
+					try {
+						if (f.toBlob) {
+							f.toBlob(function(a) {
+								var b = webkitURL?webkitURL.createObjectURL(a):URL.createObjectURL(a);
+								c.onload = function() {
+									c.onload =
+										null;
+									webkitURL?webkitURL.revokeObjectURL(b):URL.revokeObjectURL(b);
+								};
+								c.src = b;
+								d.fire("updateSnapshot");
+								l || d.resetDirty()
+							});
+							return
+						}
+						c.src = f.toDataURL()
+					} catch (o) {
+						window.console && console.log("CKEDITOR.plugins.imagemaps.drawMap", o)
+					}
+					d.fire("updateSnapshot");
+					l || d.resetDirty()
+				} else {
+					var q = function() {
+						c.removeEventListener("load", q);
+						CKEDITOR.plugins.imagemaps.drawMap(c, a, null, d)
+					};
+					c.addEventListener("load", q, false)
+				}
+		}
+	};
+	CKEDITOR.on("dialogDefinition", function(c) {
+		if (c.data.name == "image") {
+			var a = c.data.definition;
+			c.removeListener();
+			a.onOk = CKEDITOR.tools.override(a.onOk,
+				function(a) {
+					return function() {
+						a.call(this);
+						var c = this.imageElement,
+							e = c.getAttribute("usemap");
+						if (e) {
+							var f = this.getParentEditor();
+							(e = f.editable().$.querySelector(e)) && f.plugins.imagemaps && CKEDITOR.plugins.imagemaps.drawMap(c.$, e, null, f)
+						}
+					}
+				})
+		}
+	});
+	CKEDITOR.plugins.add("imagemaps", {
+		requires: ["dialog"],
+		availableLangs:{en:1},
+		lang : "en",
+		init: function(e) {
+			var a = e.lang.imagemaps;
+			CKEDITOR.dialog.add("ImageMaps", this.path + "dialog/imagemaps.js");
+			var b = e.addCommand("imagemaps", new CKEDITOR.dialogCommand("ImageMaps", {
+				allowedContent: "img[usemap];map[id,name];area[alt,coords,href,id,shape,target,title]",
+				requiredContent: "img[src]"
+			}));
+			b.startDisabled = true;
+			e.ui.addButton("ImageMaps", {
+				label: a.toolbar,
+				command: "imagemaps",
+				icon : this.path + 'icons/imagemaps.png',
+				toolbar: "insert,10"
+			});
+			e.addMenuItems && e.addMenuItems({
+				imagemaps: {
+					label: a.menu,
+					command: "imagemaps",
+					group: "image",
+					order: 1
+				}
+			});
+			e.contextMenu && e.contextMenu.addListener(function(a) {
+				a = g(e, a);
+				return !a ? null : {
+					imagemaps: a.hasAttribute("usemap") ? CKEDITOR.TRISTATE_ON : CKEDITOR.TRISTATE_OFF
+				}
+			});
+			e.on("doubleclick",
+				function(a) {
+					var b = a.data.element,
+						c = a.editor,
+						e;
+					if (b.is("area")) {
+						var k = b.getParent().$.getAttribute("id"),
+							j = c.editable().$;
+						j.querySelector && (e = j.querySelector('img[usemap="#' + k + '"]'));
+						if (e) {
+							c.getSelection().selectElement(new CKEDITOR.dom.element(e));
+							a.data.dialog = "ImageMaps";
+							return
+						}
+					}
+					if ((e = g(c, b)) && e.hasAttribute("usemap")) {
+						c.getSelection().selectElement(e);
+						a.data.dialog = "ImageMaps"
+					}
+				}, null, null, 20);
+			if (e.widgets) e.on("contentDom", function() {
+				var a = e.editable();
+				a.attachListener(a, "click", function(b) {
+					var c =
+						b.data.$,
+						c = new CKEDITOR.dom.node(c.target || c.srcElement);
+					if (c.is && c.is("area")) {
+						CKEDITOR.env.ie && b.data.preventDefault();
+						var c = c.getParent().$.getAttribute("id"),
+							g = a.$;
+						if (g.querySelector)
+							if (c = g.querySelector('img[usemap="#' + c + '"]'))
+								if (c = e.widgets.getByElement(new CKEDITOR.dom.node(c))) {
+									c.focus();
+									b.data.preventDefault()
+								}
+					}
+				})
+			});
+			e.on("selectionChange", CKEDITOR.tools.bind(function(a) {
+				(a = g(a.editor, a.data.path.lastElement)) ? this.setState(a.hasAttribute("usemap") ? CKEDITOR.TRISTATE_ON : CKEDITOR.TRISTATE_OFF):
+					this.setState(CKEDITOR.TRISTATE_DISABLED)
+			}, b));
+			if (!CKEDITOR.env.ie || e.plugins.image2 && !(CKEDITOR.env.version < 9)) e.on("dataReady", function(a) {
+				var a = a.editor,
+					b = a.editable().$,
+					f = b.getElementsByTagName("map");
+				if (a.document) {
+					c(a.document.getWindow().$);
+					for (var e = 0; e < f.length; e++) {
+						var g = f[e],
+							j = b.querySelector('img[usemap="#' + g.name + '"]');
+						j && CKEDITOR.plugins.imagemaps.drawMap(j, g, null, a)
+					}
+				}
+			}, null, null, 50)
+		},
+		afterInit: function(c) {
+			var a = c.dataProcessor;
+			(a && a.htmlFilter).addRules({
+				elements: {
+					map: function(a) {
+						if (a.attributes.id &&
+							!a.attributes.name) a.attributes.name = a.attributes.id;
+						var d = c.editable().$;
+						return d.querySelector && !d.querySelector('img[usemap="#' + a.attributes.name + '"]') ? false : a
+					}
+				}
+			}, {
+				applyToAll: true
+			})
+		}
+	});
+	delete CKEDITOR.dtd.$nonBodyContent.map;
+	CKEDITOR.dtd.head.map = 1;
+	CKEDITOR.dtd.body.map = 1
+})();
+(function() {
+    function c(c) {
+        a(!0);
+        b();
+        n = c.aid;
+        m = !0;
+        q.setValueOf("info", "href", c.ahref);
+        q.setValueOf("info", "target", c.atarget || "notSet");
+        q.setValueOf("info", "alt", c.aalt);
+        q.setValueOf("info", "title", c.atitle);
+        m = !1
+    }
+
+    function g(c) {
+        a(!0);
+        b();
+        n = c;
+        m = !0;
+        q.getContentElement("info", "href").setValue("", !0);
+        q.getContentElement("info", "target").setValue("notSet", !0);
+        q.getContentElement("info", "alt").setValue("", !0);
+        q.getContentElement("info", "title").setValue("", !0);
+        m = !1
+    }
+
+    function e() {
+        n = null;
+        a(!1)
+    }
+
+    function a(a) {
+        for (var b =
+                1; 2 >= b; b++) {
+            var c = q.getContentElement("info", "properties" + b).getElement();
+            a ? c.setStyle("visibility", "") : c.setStyle("visibility", "hidden")
+        }
+    }
+
+    function b() {
+        null !== n && (k.areas[n].ahref = q.getValueOf("info", "href"), k.areas[n].aalt = q.getValueOf("info", "alt"), k.areas[n].atitle = q.getValueOf("info", "title"))
+    }
+
+    function d(a) {
+        "pointer" == a ? (k.is_drawing = 0, k.nextShape = "", p.$.style.cursor = "default") : (k.nextShape = a, p.$.style.cursor = "crosshair");
+        i(a)
+    }
+
+    function i(a) {
+        o && o.removeClass("imgmapButtonActive");
+        o = q.getContentElement("info",
+            "btn_" + a).getElement();
+        o.addClass("imgmapButtonActive")
+    }
+
+    function f(a) {
+        for (var b = "", c = 0; c < a.areas.length; c++) {
+            var d;
+            d = a.areas[c];
+            if (!d || "" === d.shape) d = "";
+            else {
+                var f = '<area shape="' + d.shape + '" coords="' + d.lastInput + '"';
+                d.aalt && (f += ' alt="' + d.aalt + '"');
+                d.atitle && (f += ' title="' + d.atitle + '"');
+                d.ahref && (f += ' href="' + d.ahref + '" data-cke-saved-href="' + d.ahref + '"');
+                d.atarget && "notSet" != d.atarget && (f += ' target="' + d.atarget + '"');
+                d.id && (f += ' id="' + d.id + '"');
+
+                d.className && (f += ' class="' + d.className + '"');
+                d = f += "/>"
+            }
+            b +=
+                d
+        }
+        return b
+    }
+
+    function h() {
+        if (!m) {
+            var a = n;
+            null !== a && (k.areas[a]["a" + this.id] = this.getValue(), k._recalculate(a))
+        }
+    }
+    var k, j, l, o, q, p, m, n = null;
+    CKEDITOR.dialog.add("ImageMaps", function(a) {
+        function m() {
+            if (H && "undefined" != typeof imgmap && !(CKEDITOR.env.ie && "undefined" == typeof window.CanvasRenderingContext2D)) {
+                l = n = null;
+                j = a.getSelection().getSelectedElement();
+                if ((!j || !j.is("img")) && a.widgets) {
+                    var b = a.widgets.focused;
+                    if (b && ("image2" == b.name || "image" == b.name))
+                        if (b = b.element) "img" == b.getName() ? j = b : (b = b.getElementsByTag("img"),
+                            1 == b.count() && (j = b.getItem(0)))
+                }
+                if (!j || !j.is("img")) alert(u.msgImageNotSelected), q.hide();
+                else {
+                    var b = j.data ? j.data("cke-saved-src") : j.getAttribute("_cke_saved_src"),
+                        f = document.getElementById(v);
+                    b || (b = j.$.src);
+                    var h = CKEDITOR.document.getWindow().getViewPaneSize().height - 290,
+                        h = Math.max(h, 315);
+                    f.style.maxHeight = h + "px";
+                    k = new imgmap({
+                        mode: "editor2",
+                        custom_callbacks: {
+                            onSelectArea: c,
+                            onRemoveArea: e,
+                            onStatusMessage: function(a) {
+                                document.getElementById(A).innerHTML = a
+                            },
+                            onLoadImage: function(a) {
+                                var b = a.getAttribute("width"),
+                                    c = a.getAttribute("height");
+                                if (b) a.style.width = b + "px";
+                                if (c) a.style.height = c + "px";
+                                p = new CKEDITOR.dom.element(a);
+                                p.on("dragstart", function(a) {
+                                    a.data.preventDefault()
+                                })
+                            }
+                        },
+                        pic_container: f,
+                        bounding_box: !1,
+                        lang: "",
+                        CL_DRAW_SHAPE: "#F00",
+                        CL_NORM_SHAPE: "#AAA",
+                        CL_HIGHLIGHT_SHAPE: "#F00"
+                    });
+                    k.loadStrings(u.imgmapStrings);
+                    j = j.$;
+                    k.loadImage(b, parseInt(j.style.width || j.width || 0, 10), parseInt(j.style.height || j.height || 0, 10));
+                    b = j.getAttribute("usemap", 2) || j.usemap;
+                    if ("string" == typeof b && "" !== b) {
+                        b = b.substr(1);
+                        f = (a.editable ?
+                            a.editable().$ : a.document.$).getElementsByTagName("MAP");
+                        for (h = 0; h < f.length; h++)
+                            if (f[h].name == b || f[h].id == b) {
+                                l = f[h];
+                                k.setMapHTML(l);
+                                q.setValueOf("info", "MapName", b);
+                                break
+                            }
+                    }
+                    k.config.custom_callbacks.onAddArea = g;
+                    l ? (k.blurArea(k.currentid), k.currentid = 0, k.selectedId = 0, c(k.areas[0]), k.highlightArea(0), d("pointer")) : i("rect");
+                    s();
+                    window.setTimeout(s, 1E3)
+                }
+            }
+        }
+
+        function x() {
+            a.fire("saveSnapshot");
+            j && "IMG" == j.nodeName && (j.removeAttribute("usemap", 0), j.src = j.attributes["data-cke-saved-src"].value);
+            l && l.parentNode.removeChild(l);
+            a.fire("saveSnapshot");
+            q.hide()
+        }
+
+        function s() {
+            var b = parseInt(CKEDITOR.revision, 10);
+            if (isNaN(b) || !(7296 > b && CKEDITOR.skins && a.config.filebrowserBrowseUrl)) {
+                var b = q.parts.contents,
+                    c = b.getFirst().getFirst(),
+                    d = document.getElementById(v);
+                d.style.width = parseInt(b.$.style.width, 10) + "px";
+                d.style.height = parseInt(d.style.height, 10) + (parseInt(b.$.style.height, 10) - c.$.offsetHeight) + "px"
+            }
+        }
+        var u = a.lang.imagemaps,
+            z = a.lang.common.generalTab,
+            v = "pic_container" + CKEDITOR.tools.getNextNumber(),
+            A = "StatusContainer" + CKEDITOR.tools.getNextNumber(),
+            y = a.plugins.imagemaps,
+            H = !1;
+        CKEDITOR.env.ie && "undefined" == typeof window.CanvasRenderingContext2D && CKEDITOR.scriptLoader.load(y.path + "dialog/excanvas.js", m);
+        "undefined" == typeof imgmap && CKEDITOR.scriptLoader.load(y.path + "dialog/imgmap.js", m);
+        var w = "",
+            F = CKEDITOR.document.getHead().append("style");
+        F.setAttribute("type", "text/css");
+        w += '.imgmapButton {cursor:pointer; background: url("' + y.path + 'images/sprite.png") no-repeat top left; width: 16px; height: 16px; display:inline-block;}';
+        w = w + ".imgmapButtonActive {outline:1px solid #666; background-color:#ddd;}.imgmap_label {cursor:default;}" +
+            ("#" + v + " img {max-width:none; max-height:none;}");
+        CKEDITOR.env.ie && 11 > CKEDITOR.env.version ? F.$.styleSheet.cssText = w : F.$.innerHTML = w;
+        y = "fieldset";
+        w = parseInt(CKEDITOR.revision, 10);
+        !isNaN(w) && (7296 > w && CKEDITOR.skins && a.config.filebrowserBrowseUrl) && (y = "vbox");
+        return {
+            title: u.title,
+            minWidth: 500,
+            minHeight: 510,
+            buttons: [{
+                type: "button",
+                label: u.imgmapBtnRemove,
+                onClick: x
+            }, CKEDITOR.dialog.okButton, CKEDITOR.dialog.cancelButton],
+            contents: [{
+                id: "info",
+                label: z,
+                title: z,
+                elements: [{
+                    type: y,
+                    label: u.imgmapMap,
+                    id: "ContainerMapName",
+                    hidden: !0,
+                    children: [{
+                        id: "MapName",
+                        type: "text",
+                        label: u.imgmapMapName,
+                        labelLayout: "horizontal",
+                        onChange: function() {
+                            k.mapname = this.getValue()
+                        }
+                    }]
+                }, {
+                    type: y,
+                    label: u.imgmapMapAreas,
+                    children: [{
+                        type: "hbox",
+                        id: "button_container",
+                        style: "margin-bottom:10px",
+                        widths: "20px 18px 18px 18px 26px 230px 100px".split(" "),
+                        children: [{
+                            type: "html",
+                            id: "btn_pointer",
+                            onClick: function() {
+                                d("pointer")
+                            },
+                            html: '<span style="background-position: 0 -64px;" class="imgmapButton" title="' + u.imgmapPointer + '"></span>'
+                        }, {
+                            type: "html",
+                            id: "btn_rect",
+                            onClick: function() {
+                                d("rect")
+                            },
+                            html: '<span style="background-position: 0 -128px;" class="imgmapButton" title="' + u.imgmapRectangle + '"></span>'
+                        }, {
+                            type: "html",
+                            id: "btn_circle",
+                            onClick: function() {
+                                d("circle")
+                            },
+                            html: '<span style="background-position: 0 0;" class="imgmapButton" title="' + u.imgmapCircle + '"></span>'
+                        }, {
+                            type: "html",
+                            id: "btn_poly",
+                            onClick: function() {
+                                d("poly")
+                            },
+                            html: '<span style="background-position: 0 -96px;" class="imgmapButton" title="' + u.imgmapPolygon + '"></span>'
+                        }, {
+                            type: "html",
+                            onClick: function() {
+                                k.removeArea(k.currentid)
+                            },
+                            html: '<span style="background-position: 0 -32px;" class="imgmapButton" title="' + u.imgmapDeleteArea + '"></span>'
+                        }, {
+                            type: "html",
+                            html: '<div id="' + A + '">&nbsp;</div>'
+                        }, {
+                            type: "select",
+                            id: "zoom",
+                            labelLayout: "horizontal",
+                            label: u.imgmapLabelZoom,
+                            onChange: function() {
+                                var a = this.getValue(),
+                                    b = document.getElementById(v).getElementsByTagName("img")[0];
+                                b && (b.oldwidth || (b.oldwidth = b.width), b.oldheight || (b.oldheight = b.height), b.style.width = b.oldwidth * a + "px", b.style.height = b.oldheight * a + "px", k.scaleAllAreas(a))
+                            },
+                            "default": "1",
+                            items: [
+                                ["25%", "0.25"],
+                                ["50%", "0.5"],
+                                ["100%", "1"],
+                                ["200%", "2"],
+                                ["300%", "3"]
+                            ]
+                        }]
+                    }, {
+                        type: "hbox",
+                        id: "properties1",
+                        style: "visibility:hidden",
+                        children: [{
+                            type: "text",
+                            id: "href",
+                            label: u.linkURL,
+                            onChange: h
+                        }, {
+                            type: "button",
+                            id: "browse",
+                            label: a.lang.common.browseServer,
+                            style: "display:inline-block;margin-top:10px;",
+                            align: "center",
+                            hidden: "true",
+                            filebrowser: "info:href"
+                        }, {
+                            id: "target",
+                            type: "select",
+                            label: u.linkTarget,
+                            onChange: h,
+                            items: [
+                                [u.notSet, "notSet"],
+                                [u.linkTargetSelf, "_self"],
+                                [u.linkTargetBlank, "_blank"],
+                                [u.linkTargetTop,
+                                    "_top"
+                                ]
+                            ]
+                        }]
+                    }, {
+                        type: "hbox",
+                        id: "properties2",
+                        style: "visibility:hidden",
+                        children: [{
+                            type: "text",
+                            id: "title",
+                            label: u.advisoryTitle,
+                            onChange: h
+                        }, {
+                            type: "text",
+                            id: "alt",
+                            hidden: !0,
+                            label: u.altText,
+                            onChange: h
+                        }]
+                    }]
+                }, {
+                    type: "fieldset",
+                    style: "border:0; padding:0",
+                    label: "&nbsp;",
+                    children: [{
+                        type: "html",
+                        html: '<div id="' + v + '" style="overflow:auto;width:500px;height:390px;position:relative;"></div>'
+                    }]
+                }]
+            }],
+            onLoad: function() {
+                q = this;
+                q.on("resize", s)
+            },
+            onShow: function() {
+                H = !0;
+                m()
+            },
+            onHide: function() {
+                o && (o.removeClass("imgmapButtonActive"),
+                    o = null);
+                document.getElementById(v).innerHTML = ""
+            },
+            onOk: function() {
+                b();
+                if (j && "IMG" == j.nodeName) {
+                    var c = f(k);
+                    if (c) {
+                        k.mapid = k.mapname = q.getValueOf("info", "MapName");
+                        if ("boolean" == typeof a.fire("imagemaps.validate", k)) return !1;
+                        a.fire("saveSnapshot");
+                        c = f(k);
+                        if (!l) {
+                            l = a.document.$.createElement("map");
+                            var d = j;
+                            if (a.widgets) {
+                                var e = a.widgets.focused;
+                                e && (d = e.wrapper.$)
+                            }
+                            d.parentNode.insertBefore(l, d.nextSibling)
+                        }
+                        l.innerHTML = c;
+                        l.name && l.removeAttribute("name");
+                        l.name = k.getMapName();
+                        l.id = k.getMapId();
+                        j.setAttribute("usemap",
+                            "#" + l.name, 0);
+                        CKEDITOR.plugins.imagemaps.drawMap(j, l, null, a);
+                        a.fire("saveSnapshot")
+                    } else x()
+                }
+            }
+        }
+    })
+})();
+(function(c) {
+    function g(a) {
+        this.version = "2.2";
+        this.buildDate = "2009/08/12 22:18";
+        this.buildNumber = "113";
+        this.config = {};
+        this.is_drawing = 0;
+        this.strings = [];
+        this.memory = [];
+        this.areas = [];
+        this.eventHandlers = {};
+        this.currentid = 0;
+        this.selectedId = this.draggedId = null;
+        this.nextShape = "rect";
+        this.isLoaded = !1;
+        this.mapid = this.mapname = "";
+        this.DM_RECTANGLE_DRAW = this.globalscale = 1;
+        this.DM_RECTANGLE_MOVE = 11;
+        this.DM_RECTANGLE_RESIZE_TOP = 12;
+        this.DM_RECTANGLE_RESIZE_RIGHT = 13;
+        this.DM_RECTANGLE_RESIZE_BOTTOM = 14;
+        this.DM_RECTANGLE_RESIZE_LEFT =
+            15;
+        this.DM_SQUARE_DRAW = 2;
+        this.DM_SQUARE_MOVE = 21;
+        this.DM_SQUARE_RESIZE_TOP = 22;
+        this.DM_SQUARE_RESIZE_RIGHT = 23;
+        this.DM_SQUARE_RESIZE_BOTTOM = 24;
+        this.DM_SQUARE_RESIZE_LEFT = 25;
+        this.DM_POLYGON_DRAW = 3;
+        this.DM_POLYGON_LASTDRAW = 30;
+        this.DM_POLYGON_MOVE = 31;
+        this.config.custom_callbacks = {};
+        this.event_types = "onAddArea onRemoveArea onDrawArea onResizeArea onMoveArea onLoadImage onSelectArea onStatusMessage onAreaChanged".split(" ");
+        this.config.CL_DRAW_SHAPE = "#d00";
+        this.config.CL_DRAW_BG = "#fff";
+        this.config.CL_NORM_SHAPE =
+
+            "#d00";
+        this.config.CL_NORM_BG = "#fff";
+        this.config.CL_HIGHLIGHT_SHAPE = "#d00";
+        this.config.CL_HIGHLIGHT_BG = "#fff";
+        this.config.CL_KNOB = "#555";
+        this.config.bounding_box = !0;
+        this.config.label = "%n";
+        this.config.label_class = "imgmap_label";
+        this.config.label_style = "font: bold 10px Arial";
+        this.config.hint = "#%n %h";
+        this.config.draw_opacity = "35";
+        this.config.norm_opacity = "50";
+        this.config.highlight_opacity = "70";
+        this.config.cursor_default = "crosshair";
+        var b = navigator.userAgent;
+        this.isMSIE = "Microsoft Internet Explorer" ==
+            navigator.appName;
+        this.isSafari = -1 != b.indexOf("Safari");
+        this.setup(a)
+    }
+
+    function e(a) {
+        return a.replace(/^\s+|\s+$/g, "")
+    }
+    c.imgmap = g;
+    g.prototype.setup = function(a) {
+        for (var b in a) a.hasOwnProperty(b) && (this.config[b] = a[b]);
+        this.addEvent(document, "keydown", this.eventHandlers.doc_keydown = this.doc_keydown.bind2(this));
+        this.addEvent(document, "keyup", this.eventHandlers.doc_keyup = this.doc_keyup.bind2(this));
+        this.addEvent(document, "mousedown", this.eventHandlers.doc_mousedown = this.doc_mousedown.bind2(this));
+        a && a.pic_container &&
+            (this.pic_container = a.pic_container, this.disableSelection(this.pic_container));
+        var c;
+        for (b in this.config.custom_callbacks)
+            if (this.config.custom_callbacks.hasOwnProperty(b)) {
+                a = 0;
+                for (c = this.event_types.length; a < c && b != this.event_types[a]; a++);
+            }
+        return !0
+    };
+    g.prototype.loadStrings = function(a) {
+        for (var b in a) a.hasOwnProperty(b) && (this.strings[b] = a[b])
+    };
+    g.prototype.addEvent = function(a, b, c) {
+        return a.addEventListener ? (a.addEventListener(b, c, !1), !0) : a.attachEvent("on" + b, c)
+    };
+    g.prototype.removeEvent = function(a,
+        b, c) {
+        return a.removeEventListener ? (a.removeEventListener(b, c, !1), !0) : a.detachEvent("on" + b, c)
+    };
+    g.prototype.loadImage = function(a, b, c) {
+        if ("undefined" == typeof this.pic_container) return !1;
+        this.removeAllAreas();
+        this.globalscale = 1;
+        "undefined" == typeof this.pic && (this.pic = document.createElement("IMG"), this.pic_container.appendChild(this.pic), this.addEvent(this.pic, "mousedown", this.eventHandlers.img_mousedown = this.img_mousedown.bind2(this)), this.addEvent(this.pic, "mouseup", this.eventHandlers.img_mouseup = this.img_mouseup.bind2(this)),
+            this.addEvent(this.pic, "mousemove", this.eventHandlers.img_mousemove = this.img_mousemove.bind2(this)), this.pic.style.cursor = this.config.cursor_default);
+        this.pic.src = a;
+        b && 0 < b && this.pic.setAttribute("width", b);
+        c && 0 < c && this.pic.setAttribute("height", c);
+        this.fireEvent("onLoadImage", this.pic);
+        return !0
+    };
+    g.prototype.statusMessage = function(a) {
+        this.fireEvent("onStatusMessage", a)
+    };
+    g.prototype.log = function() {};
+    g.prototype.getMapName = function() {
+        if ("" === this.mapname) {
+            if ("" !== this.mapid) return this.mapid;
+            var a = new Date;
+            this.mapname = "imgmap" + a.getFullYear() + (a.getMonth() + 1) + a.getDate() + a.getHours() + a.getMinutes() + a.getSeconds()
+        }
+        return this.mapname
+    };
+    g.prototype.getMapId = function() {
+        "" === this.mapid && (this.mapid = this.getMapName());
+        return this.mapid
+    };
+    g.prototype._normShape = function(a) {
+        if (!a) return "rect";
+        a = e(a).toLowerCase();
+        return "rect" == a.substring(0, 4) ? "rect" : "circ" == a.substring(0, 4) ? "circle" : "poly" == a.substring(0, 4) ? "poly" : "rect"
+    };
+    g.prototype._normCoords = function(a, b, c) {
+        var g, f, h, k, a = e(a);
+        if ("" === a) return "";
+        var j =
+            a,
+            a = a.replace(/(\d)([^\d\.])+(\d)/g, "$1,$3"),
+            a = a.replace(/,\D+(\d)/g, ",$1"),
+            a = a.replace(/,0+(\d)/g, ",$1"),
+            a = a.replace(/(\d)(\D)+,/g, "$1,"),
+            a = a.replace(/^\D+(\d)/g, "$1"),
+            a = a.replace(/^0+(\d)/g, "$1"),
+            a = a.replace(/(\d)(\D)+$/g, "$1"),
+            l = a.split(",");
+        if ("rect" == b) {
+            if ("fromcircle" == c) a = l[2], l[0] -= a, l[1] -= a, l[2] = parseInt(l[0], 10) + 2 * a, l[3] = parseInt(l[1], 10) + 2 * a;
+            else if ("frompoly" == c) {
+                b = parseInt(l[0], 10);
+                f = parseInt(l[0], 10);
+                g = parseInt(l[1], 10);
+                h = parseInt(l[1], 10);
+                a = 0;
+                for (k = l.length; a < k; a++) 0 === a % 2 && parseInt(l[a],
+                    10) < b && (b = parseInt(l[a], 10)), 1 === a % 2 && parseInt(l[a], 10) < g && (g = parseInt(l[a], 10)), 0 === a % 2 && parseInt(l[a], 10) > f && (f = parseInt(l[a], 10)), 1 === a % 2 && parseInt(l[a], 10) > h && (h = parseInt(l[a], 10));
+                l[0] = b;
+                l[1] = g;
+                l[2] = f;
+                l[3] = h
+            }
+            0 <= parseInt(l[1], 10) || (l[1] = l[0]);
+            0 <= parseInt(l[2], 10) || (l[2] = parseInt(l[0], 10) + 10);
+            0 <= parseInt(l[3], 10) || (l[3] = parseInt(l[1], 10) + 10);
+            parseInt(l[0], 10) > parseInt(l[2], 10) && (a = l[0], l[0] = l[2], l[2] = a);
+            parseInt(l[1], 10) > parseInt(l[3], 10) && (a = l[1], l[1] = l[3], l[3] = a);
+            a = l[0] + "," + l[1] + "," + l[2] + "," +
+                l[3]
+        } else if ("circle" == b) {
+            if ("fromrect" == c) b = parseInt(l[0], 10), f = parseInt(l[2], 10), g = parseInt(l[1], 10), h = parseInt(l[3], 10), l[2] = f - b < h - g ? f - b : h - g, l[2] = Math.floor(l[2] / 2), l[0] = b + l[2], l[1] = g + l[2];
+            else if ("frompoly" == c) {
+                b = parseInt(l[0], 10);
+                f = parseInt(l[0], 10);
+                g = parseInt(l[1], 10);
+                h = parseInt(l[1], 10);
+                a = 0;
+                for (k = l.length; a < k; a++) 0 === a % 2 && parseInt(l[a], 10) < b && (b = parseInt(l[a], 10)), 1 === a % 2 && parseInt(l[a], 10) < g && (g = parseInt(l[a], 10)), 0 === a % 2 && parseInt(l[a], 10) > f && (f = parseInt(l[a], 10)), 1 === a % 2 && parseInt(l[a],
+                    10) > h && (h = parseInt(l[a], 10));
+                l[2] = f - b < h - g ? f - b : h - g;
+                l[2] = Math.floor(l[2] / 2);
+                l[0] = b + l[2];
+                l[1] = g + l[2]
+            }
+            0 < parseInt(l[1], 10) || (l[1] = l[0]);
+            0 < parseInt(l[2], 10) || (l[2] = 10);
+            a = l[0] + "," + l[1] + "," + l[2]
+        } else if ("poly" == b) {
+            if ("fromrect" == c) l[4] = l[2], l[5] = l[3], l[2] = l[0], l[6] = l[4], l[7] = l[1];
+            else if ("fromcircle" == c) {
+                b = parseInt(l[0], 10);
+                g = parseInt(l[1], 10);
+                f = parseInt(l[2], 10);
+                h = 0;
+                l[h++] = b + f;
+                l[h++] = g;
+                for (a = 0; 60 >= a; a++) {
+                    var o = a / 60;
+                    k = Math.cos(2 * o * Math.PI);
+                    o = Math.sin(2 * o * Math.PI);
+                    k = b + k * f;
+                    o = g + o * f;
+                    l[h++] = Math.round(k);
+                    l[h++] =
+                        Math.round(o)
+                }
+            }
+            a = l.join(",")
+        }
+        return "preserve" == c && j != a ? j : a
+    };
+    g.prototype.setMapHTML = function(a) {
+        this.fireEvent("onSetMap", a);
+        this.removeAllAreas();
+        var b;
+        "string" == typeof a ? (b = document.createElement("DIV"), b.innerHTML = a, b = b.firstChild) : "object" == typeof a && (b = a);
+        if (!b || "map" !== b.nodeName.toLowerCase()) return !1;
+        this.mapname = b.name;
+        this.mapid = b.id;
+        for (var a = b.getElementsByTagName("area"), c, e, f, g = 0, k = a.length; g < k; g++) {
+            b = "";
+            f = this.addNewArea();
+            c = this._normShape(a[g].getAttribute("shape", 2));
+            this.initArea(f,
+                c);
+            a[g].getAttribute("coords", 2) && (b = this._normCoords(a[g].getAttribute("coords", 2), c), this.areas[f].lastInput = b);
+            c = a[g].getAttribute("href", 2);
+            (e = a[g].getAttribute("data-cke-saved-href")) && (c = e);
+            c && (this.areas[f].ahref = c);
+            if (c = a[g].getAttribute("alt")) this.areas[f].aalt = c;
+            (e = a[g].getAttribute("title")) || (e = c);
+            e && (this.areas[f].atitle = e);
+            if (c = a[g].getAttribute("target")) this.areas[f].atarget = c.toLowerCase();
+            if (c = a[g].getAttribute("id")) this.areas[f].id = c;
+            if (c = a[g].getAttribute("class")) this.areas[f].className =
+                c;
+            this._recalculate(f, b);
+            this.relaxArea(f);
+            this.fireEvent("onAreaChanged", this.areas[f])
+        }
+        return !0
+    };
+    g.prototype.addNewArea = function() {
+        var a = this._getLastArea(),
+            a = a ? a.aid + 1 : 0,
+            b = this.areas[a] = document.createElement("DIV");
+        b.id = this.mapname + "area" + a;
+        b.aid = a;
+        b.shape = "undefined";
+        this.blurArea(this.currentid);
+        this.currentid = a;
+        this.fireEvent("onAddArea", a);
+        return a
+    };
+    g.prototype.initArea = function(a, b) {
+        var c = this.areas[a];
+        c && (c.parentNode && c.parentNode.removeChild(c), c.label && c.label.parentNode.removeChild(c.label),
+            c = this.areas[a] = document.createElement("CANVAS"), this.pic_container.appendChild(c), this.pic_container.style.position = "relative", "undefined" != typeof G_vmlCanvasManager && (c = this.areas[a] = G_vmlCanvasManager.initElement(c)), c.aid = a, c.shape = b, c.ahref = "", c.atitle = "", c.aalt = "", c.atarget = "", c.style.position = "absolute", c.style.top = this.pic.offsetTop + "px", c.style.left = this.pic.offsetLeft + "px", this._setopacity(c, this.config.CL_DRAW_BG, this.config.draw_opacity), c.onmousedown = this.area_mousedown.bind2(this), c.onmouseup =
+            this.area_mouseup.bind2(this), c.onmousemove = this.area_mousemove.bind2(this), c.onmouseover = this.area_mouseover.bind2(this), c.onmouseout = this.area_mouseout.bind2(this), this.memory[a] = {}, this.memory[a].downx = 0, this.memory[a].downy = 0, this.memory[a].left = 0, this.memory[a].top = 0, this.memory[a].width = 0, this.memory[a].height = 0, this.memory[a].xpoints = [], this.memory[a].ypoints = [], c.label = document.createElement("DIV"), this.pic_container.appendChild(c.label), c.label.className = this.config.label_class, this.assignCSS(c.label,
+                this.config.label_style), c.label.style.position = "absolute")
+    };
+    g.prototype.relaxArea = function(a) {
+        var b = this.areas[a];
+        b && (a != this.currentid ? (this._setBorder(b, "NORM"), this._setopacity(b, this.config.CL_NORM_BG, this.config.norm_opacity)) : this.highlightArea(a))
+    };
+    g.prototype._setBorder = function(a, b) {
+        "rect" == a.shape || this.config.bounding_box ? (a.style.borderWidth = "1px", a.style.borderStyle = "DRAW" == b ? "dotted" : "solid", a.style.borderColor = this.config["CL_" + b + "_" + ("rect" == a.shape ? "SHAPE" : "BOX")]) : a.style.border =
+            ""
+    };
+    g.prototype._setopacity = function(a, b, d) {
+        b && (a.style.backgroundColor = b);
+        if (d && "string" == typeof d && d.match(/^\d*\-\d+$/)) {
+            var e = d.split("-");
+            "undefined" != typeof e[0] && (e[0] = parseInt(e[0], 10), this._setopacity(a, b, e[0]));
+            if ("undefined" != typeof e[1]) {
+                e[1] = parseInt(e[1], 10);
+                var b = this._getopacity(a),
+                    f = this,
+                    d = Math.round(e[1] - b);
+                5 < d ? (c.setTimeout(function() {
+                    f._setopacity(a, null, "-" + e[1])
+                }, 20), d = 1 * b + 5) : -3 > d ? (c.setTimeout(function() {
+                    f._setopacity(a, null, "-" + e[1])
+                }, 20), d = 1 * b - 3) : d = e[1]
+            }
+        }
+        isNaN(d) || (d = Math.round(parseInt(d,
+            10)), a.style.opacity = d / 100, a.style.filter = "alpha(opacity=" + d + ")")
+    };
+    g.prototype._getopacity = function(a) {
+        return 1 >= a.style.opacity ? 100 * a.style.opacity : a.style.filter ? parseInt(a.style.filter.replace(/alpha\(opacity\=([^\)]*)\)/ig, "$1"), 10) : 100
+    };
+    g.prototype.removeArea = function(a) {
+        if (!(null === a || "undefined" == typeof a)) {
+            try {
+                this.areas[a].label.parentNode.removeChild(this.areas[a].label), this.areas[a].parentNode.removeChild(this.areas[a]), this.areas[a].label.className = null, this.areas[a].label = null, this.areas[a].onmouseover =
+                    null, this.areas[a].onmouseout = null, this.areas[a].onmouseup = null, this.areas[a].onmousedown = null, this.areas[a].onmousemove = null
+            } catch (b) {}
+            this.areas[a] = null;
+            this.fireEvent("onRemoveArea", a)
+        }
+    };
+    g.prototype.removeAllAreas = function() {
+        for (var a = 0, b = this.areas.length; a < b; a++) this.areas[a] && this.removeArea(a)
+    };
+    g.prototype.scaleAllAreas = function(a) {
+        var b = a / this.globalscale;
+        this.globalscale = a;
+        for (var a = 0, c = this.areas.length; a < c; a++) this.areas[a] && "undefined" != this.areas[a].shape && this.scaleArea(a, b)
+    };
+    g.prototype.scaleArea =
+        function(a, b) {
+            var c = this.areas[a];
+            c.style.top = parseInt(c.style.top, 10) * b + "px";
+            c.style.left = parseInt(c.style.left, 10) * b + "px";
+            this.setAreaSize(a, c.width * b, c.height * b);
+            if ("poly" == c.shape)
+                for (var e = 0, f = c.xpoints.length; e < f; e++) c.xpoints[e] *= b, c.ypoints[e] *= b;
+            this._repaint(c, this.config.CL_NORM_SHAPE);
+            this._updatecoords(a)
+        };
+    g.prototype._putlabel = function(a) {
+        var b = this.areas[a];
+        if (b.label) try {
+            if (this.config.label) {
+                b.label.style.display = "";
+                var c = this.config.label,
+                    c = c.replace(/%n/g, "" + a),
+                    c = c.replace(/%c/g,
+                        "" + b.lastInput),
+                    c = c.replace(/%h/g, "" + b.ahref),
+                    c = c.replace(/%a/g, "" + b.aalt),
+                    c = c.replace(/%t/g, "" + b.atitle);
+                b.label.innerHTML = c
+            } else b.label.innerHTML = "", b.label.style.display = "none";
+            b.label.style.top = b.style.top;
+            b.label.style.left = b.style.left
+        } catch (e) {}
+    };
+    g.prototype._puthint = function(a) {
+        try {
+            if (this.config.hint) {
+                var b = this.config.hint,
+                    b = b.replace(/%n/g, "" + a),
+                    b = b.replace(/%c/g, "" + this.areas[a].lastInput),
+                    b = b.replace(/%h/g, "" + this.areas[a].ahref),
+                    b = b.replace(/%a/g, "" + this.areas[a].aalt),
+                    b = b.replace(/%t/g,
+                        "" + this.areas[a].atitle);
+                this.areas[a].title = b;
+                this.areas[a].alt = b
+            } else this.areas[a].title = "", this.areas[a].alt = ""
+        } catch (c) {}
+    };
+    g.prototype._repaintAll = function() {
+        for (var a = 0, b = this.areas.length; a < b; a++) this.areas[a] && this._repaint(this.areas[a], this.config.CL_NORM_SHAPE)
+    };
+    g.prototype._repaint = function(a, b, c, e) {
+        var f, g, k, j, l;
+        if ("circle" == a.shape) g = parseInt(a.style.width, 10), c = Math.floor(g / 2) - 1, 0 > c && (c = 0), f = a.getContext("2d"), f.clearRect(0, 0, g, g), f.beginPath(), f.strokeStyle = b, f.arc(c, c, c, 0, 2 * Math.PI,
+            0), f.stroke(), f.closePath(), f.strokeStyle = this.config.CL_KNOB, f.strokeRect(c, c, 1, 1), this._putlabel(a.aid), this._puthint(a.aid);
+        else if ("rect" == a.shape) this._putlabel(a.aid), this._puthint(a.aid);
+        else if ("poly" == a.shape) {
+            g = parseInt(a.style.width, 10);
+            k = parseInt(a.style.height, 10);
+            j = parseInt(a.style.left, 10);
+            l = parseInt(a.style.top, 10);
+            if (a.xpoints) {
+                f = a.getContext("2d");
+                f.clearRect(0, 0, g, k);
+                f.beginPath();
+                f.strokeStyle = b;
+                f.moveTo(a.xpoints[0] - j, a.ypoints[0] - l);
+                b = 1;
+                for (g = a.xpoints.length; b < g; b++) f.lineTo(a.xpoints[b] -
+                    j, a.ypoints[b] - l);
+                (this.is_drawing == this.DM_POLYGON_DRAW || this.is_drawing == this.DM_POLYGON_LASTDRAW) && f.lineTo(c - j, e - l);
+                f.lineTo(a.xpoints[0] - j, a.ypoints[0] - l);
+                f.stroke();
+                f.closePath()
+            }
+            this._putlabel(a.aid);
+            this._puthint(a.aid)
+        }
+    };
+    g.prototype._updatecoords = function(a) {
+        var a = this.areas[a],
+            b = Math.round(parseInt(a.style.left, 10) / this.globalscale),
+            c = Math.round(parseInt(a.style.top, 10) / this.globalscale),
+            e = Math.round(parseInt(a.style.height, 10) / this.globalscale),
+            f = Math.round(parseInt(a.style.width, 10) / this.globalscale),
+            g = "";
+        if ("rect" == a.shape) a.lastInput = b + "," + c + "," + (b + f) + "," + (c + e);
+        else if ("circle" == a.shape) g = Math.floor(f / 2) - 1, a.lastInput = b + g + "," + (c + g) + "," + g;
+        else if ("poly" == a.shape) {
+            if (a.xpoints) {
+                b = 0;
+                for (c = a.xpoints.length; b < c; b++) g += Math.round(a.xpoints[b] / this.globalscale) + "," + Math.round(a.ypoints[b] / this.globalscale) + ",";
+                g = g.substring(0, g.length - 1)
+            }
+            a.lastInput = g
+        }
+        this.fireEvent("onAreaChanged", a)
+    };
+    g.prototype._recalculate = function(a, b) {
+        var c = this.areas[a];
+        try {
+            var b = b ? this._normCoords(b, c.shape, "preserve") : c.lastInput ||
+                "",
+                e = b.split(",");
+            if ("rect" == c.shape) {
+                if (4 != e.length || parseInt(e[0], 10) > parseInt(e[2], 10) || parseInt(e[1], 10) > parseInt(e[3], 10)) throw "invalid coords";
+                c.style.left = this.globalscale * (this.pic.offsetLeft + parseInt(e[0], 10)) + "px";
+                c.style.top = this.globalscale * (this.pic.offsetTop + parseInt(e[1], 10)) + "px";
+                this.setAreaSize(a, this.globalscale * (e[2] - e[0]), this.globalscale * (e[3] - e[1]));
+                this._repaint(c, this.config.CL_NORM_SHAPE)
+            } else if ("circle" == c.shape) {
+                if (3 != e.length || 0 > parseInt(e[2], 10)) throw "invalid coords";
+                var f = 2 * e[2];
+                this.setAreaSize(a, this.globalscale * f, this.globalscale * f);
+                c.style.left = this.globalscale * (this.pic.offsetLeft + parseInt(e[0], 10) - f / 2) + "px";
+                c.style.top = this.globalscale * (this.pic.offsetTop + parseInt(e[1], 10) - f / 2) + "px";
+                this._repaint(c, this.config.CL_NORM_SHAPE)
+            } else if ("poly" == c.shape) {
+                if (2 > e.length) throw "invalid coords";
+                c.xpoints = [];
+                c.ypoints = [];
+                for (var f = 0, g = e.length; f < g; f += 2) c.xpoints[c.xpoints.length] = this.globalscale * (this.pic.offsetLeft + parseInt(e[f], 10)), c.ypoints[c.ypoints.length] =
+                    this.globalscale * (this.pic.offsetTop + parseInt(e[f + 1], 10)), this._polygongrow(c, this.globalscale * e[f], this.globalscale * e[f + 1]);
+                this._polygonshrink(c)
+            }
+        } catch (k) {
+            this.statusMessage(this.strings.ERR_INVALID_COORDS);
+            c.lastInput && this.fireEvent("onAreaChanged", c);
+            this._repaint(c, this.config.CL_NORM_SHAPE);
+            return
+        }
+        c.lastInput = b
+    };
+    g.prototype._polygongrow = function(a, b, c) {
+        var e = b - parseInt(a.style.left, 10),
+            f = c - parseInt(a.style.top, 10);
+        b < parseInt(a.style.left, 10) ? (a.style.left = b - 0 + "px", this.setAreaSize(a.aid, parseInt(a.style.width,
+            10) + Math.abs(e) + 0, null)) : b > parseInt(a.style.left, 10) + parseInt(a.style.width, 10) && this.setAreaSize(a.aid, b - parseInt(a.style.left, 10) + 0, null);
+        c < parseInt(a.style.top, 10) ? (a.style.top = c - 0 + "px", this.setAreaSize(a.aid, null, parseInt(a.style.height, 10) + Math.abs(f) + 0)) : c > parseInt(a.style.top, 10) + parseInt(a.style.height, 10) && this.setAreaSize(a.aid, null, c - parseInt(a.style.top, 10) + 0)
+    };
+    g.prototype._polygonshrink = function(a) {
+        a.style.left = a.xpoints[0] + "px";
+        a.style.top = a.ypoints[0] + "px";
+        this.setAreaSize(a.aid, 0,
+            0);
+        for (var b = 0, c = a.xpoints.length; b < c; b++) this._polygongrow(a, a.xpoints[b], a.ypoints[b]);
+        this._repaint(a, this.config.CL_NORM_SHAPE)
+    };
+    g.prototype.img_mousemove = function(a) {
+        var b, d, e = this._getPos(this.pic),
+            f = this.isMSIE ? c.event.x + this.pic_container.scrollLeft - this.pic.offsetLeft : a.clientX - e.x,
+            e = this.isMSIE ? c.event.y + this.pic_container.scrollTop - this.pic.offsetTop : a.clientY - e.y,
+            f = Math.round(f),
+            e = Math.round(e);
+        if (!(0 > f || 0 > e || f > this.pic.width || e > this.pic.height)) {
+            if (this.memory[this.currentid]) {
+                d = this.memory[this.currentid].top;
+                var g = this.memory[this.currentid].left;
+                b = this.memory[this.currentid].height;
+                var k = this.memory[this.currentid].width
+            }
+            var j = this.areas[this.currentid];
+            this.isSafari && (a.shiftKey ? this.is_drawing == this.DM_RECTANGLE_DRAW && (this.is_drawing = this.DM_SQUARE_DRAW, this.statusMessage(this.strings.SQUARE2_DRAW)) : this.is_drawing == this.DM_SQUARE_DRAW && "rect" == j.shape && (this.is_drawing = this.DM_RECTANGLE_DRAW, this.statusMessage(this.strings.RECTANGLE_DRAW)));
+            if (this.is_drawing == this.DM_RECTANGLE_DRAW) {
+                if (this.fireEvent("onDrawArea",
+                        this.currentid), b = f - this.memory[this.currentid].downx, d = e - this.memory[this.currentid].downy, this.setAreaSize(this.currentid, Math.abs(b), Math.abs(d)), 0 > b && (j.style.left = f + 1 + "px"), 0 > d) j.style.top = e + 1 + "px"
+            } else if (this.is_drawing == this.DM_SQUARE_DRAW) {
+                if (this.fireEvent("onDrawArea", this.currentid), b = f - this.memory[this.currentid].downx, d = e - this.memory[this.currentid].downy, a = Math.abs(b) < Math.abs(d) ? Math.abs(parseInt(b, 10)) : Math.abs(parseInt(d, 10)), this.setAreaSize(this.currentid, a, a), 0 > b && (j.style.left =
+                        this.memory[this.currentid].downx + -1 * a + "px"), 0 > d) j.style.top = this.memory[this.currentid].downy + -1 * a + 1 + "px"
+            } else if (this.is_drawing == this.DM_POLYGON_DRAW) this.fireEvent("onDrawArea", this.currentid), this._polygongrow(j, f, e);
+            else if (this.is_drawing == this.DM_RECTANGLE_MOVE || this.is_drawing == this.DM_SQUARE_MOVE) {
+                this.fireEvent("onMoveArea", this.currentid);
+                f -= this.memory[this.currentid].rdownx;
+                e -= this.memory[this.currentid].rdowny;
+                if (f + k > this.pic.width || e + b > this.pic.height || 0 > f || 0 > e) return;
+                j.style.left =
+                    f + 1 + "px";
+                j.style.top = e + 1 + "px"
+            } else if (this.is_drawing == this.DM_POLYGON_MOVE) {
+                this.fireEvent("onMoveArea", this.currentid);
+                f -= this.memory[this.currentid].rdownx;
+                e -= this.memory[this.currentid].rdowny;
+                if (f + k > this.pic.width || e + b > this.pic.height || 0 > f || 0 > e) return;
+                b = f - g;
+                d = e - d;
+                if (j.xpoints) {
+                    k = 0;
+                    for (a = j.xpoints.length; k < a; k++) j.xpoints[k] = this.memory[this.currentid].xpoints[k] + b, j.ypoints[k] = this.memory[this.currentid].ypoints[k] + d
+                }
+                j.style.left = f + "px";
+                j.style.top = e + "px"
+            } else this.is_drawing == this.DM_SQUARE_RESIZE_LEFT ?
+                (this.fireEvent("onResizeArea", this.currentid), a = f - g, 0 < k + -1 * a ? (j.style.left = f + 1 + "px", j.style.top = d + a / 2 + "px", this.setAreaSize(this.currentid, parseInt(k + -1 * a, 10), parseInt(b + -1 * a, 10))) : (this.memory[this.currentid].width = 0, this.memory[this.currentid].height = 0, this.memory[this.currentid].left = f, this.memory[this.currentid].top = e, this.is_drawing = this.DM_SQUARE_RESIZE_RIGHT)) : this.is_drawing == this.DM_SQUARE_RESIZE_RIGHT ? (this.fireEvent("onResizeArea", this.currentid), a = f - g - k, 0 < k + a - 1 ? (j.style.top = d + -1 * a / 2 +
+                    "px", this.setAreaSize(this.currentid, k + a - 1, b + a)) : (this.memory[this.currentid].width = 0, this.memory[this.currentid].height = 0, this.memory[this.currentid].left = f, this.memory[this.currentid].top = e, this.is_drawing = this.DM_SQUARE_RESIZE_LEFT)) : this.is_drawing == this.DM_SQUARE_RESIZE_TOP ? (this.fireEvent("onResizeArea", this.currentid), a = e - d, 0 < k + -1 * a ? (j.style.top = e + 1 + "px", j.style.left = g + a / 2 + "px", this.setAreaSize(this.currentid, k + -1 * a, b + -1 * a)) : (this.memory[this.currentid].width = 0, this.memory[this.currentid].height =
+                    0, this.memory[this.currentid].left = f, this.memory[this.currentid].top = e, this.is_drawing = this.DM_SQUARE_RESIZE_BOTTOM)) : this.is_drawing == this.DM_SQUARE_RESIZE_BOTTOM ? (this.fireEvent("onResizeArea", this.currentid), a = e - d - b, 0 < k + a - 1 ? (j.style.left = g + -1 * a / 2 + "px", this.setAreaSize(this.currentid, k + a - 1, b + a - 1)) : (this.memory[this.currentid].width = 0, this.memory[this.currentid].height = 0, this.memory[this.currentid].left = f, this.memory[this.currentid].top = e, this.is_drawing = this.DM_SQUARE_RESIZE_TOP)) : this.is_drawing ==
+                this.DM_RECTANGLE_RESIZE_LEFT ? (this.fireEvent("onResizeArea", this.currentid), b = f - g, 0 < k + -1 * b ? (j.style.left = f + 1 + "px", this.setAreaSize(this.currentid, k + -1 * b, null)) : (this.memory[this.currentid].width = 0, this.memory[this.currentid].left = f, this.is_drawing = this.DM_RECTANGLE_RESIZE_RIGHT)) : this.is_drawing == this.DM_RECTANGLE_RESIZE_RIGHT ? (this.fireEvent("onResizeArea", this.currentid), b = f - g - k, 0 < k + b - 1 ? this.setAreaSize(this.currentid, k + b - 1, null) : (this.memory[this.currentid].width = 0, this.memory[this.currentid].left =
+                    f, this.is_drawing = this.DM_RECTANGLE_RESIZE_LEFT)) : this.is_drawing == this.DM_RECTANGLE_RESIZE_TOP ? (this.fireEvent("onResizeArea", this.currentid), d = e - d, 0 < b + -1 * d ? (j.style.top = e + 1 + "px", this.setAreaSize(this.currentid, null, b + -1 * d)) : (this.memory[this.currentid].height = 0, this.memory[this.currentid].top = e, this.is_drawing = this.DM_RECTANGLE_RESIZE_BOTTOM)) : this.is_drawing == this.DM_RECTANGLE_RESIZE_BOTTOM && (this.fireEvent("onResizeArea", this.currentid), d = e - d - b, 0 < b + d - 1 ? this.setAreaSize(this.currentid, null, b + d -
+                    1) : (this.memory[this.currentid].height = 0, this.memory[this.currentid].top = e, this.is_drawing = this.DM_RECTANGLE_RESIZE_TOP));
+            this.is_drawing && (this._repaint(j, this.config.CL_DRAW_SHAPE, f, e), this._updatecoords(this.currentid))
+        }
+    };
+    g.prototype.img_mouseup = function(a) {
+        var b = this._getPos(this.pic),
+            d = this.isMSIE ? c.event.x + this.pic_container.scrollLeft - this.pic.offsetLeft : a.clientX - b.x,
+            a = this.isMSIE ? c.event.y + this.pic_container.scrollTop - this.pic.offsetTop : a.clientY - b.y,
+            d = Math.round(d),
+            a = Math.round(a);
+        this.is_drawing !=
+            this.DM_RECTANGLE_DRAW && (this.is_drawing != this.DM_SQUARE_DRAW && this.is_drawing != this.DM_POLYGON_DRAW && this.is_drawing != this.DM_POLYGON_LASTDRAW) && (this.draggedId = null, this.is_drawing = 0, this.statusMessage(""), this.relaxArea(this.currentid), this.areas[this.currentid] != this._getLastArea() && (this.memory[this.currentid].downx = d, this.memory[this.currentid].downy = a))
+    };
+    g.prototype.img_mousedown = function(a) {
+        a || (a = c.event);
+        var b = this._getPos(this.pic),
+            d = Math.round(a.clientX - b.x),
+            b = Math.round(a.clientY - b.y);
+        a.shiftKey && this.is_drawing == this.DM_POLYGON_DRAW && (this.is_drawing = this.DM_POLYGON_LASTDRAW);
+        a = this.areas[this.currentid];
+        this.is_drawing == this.DM_POLYGON_DRAW ? (a.xpoints[a.xpoints.length] = d, a.ypoints[a.ypoints.length] = b, this.memory[this.currentid].downx = d, this.memory[this.currentid].downy = b) : this.is_drawing && this.is_drawing != this.DM_POLYGON_DRAW ? (this.is_drawing == this.DM_POLYGON_LASTDRAW && (a.xpoints[a.xpoints.length] = d, a.ypoints[a.ypoints.length] = b, this._updatecoords(this.currentid), this.is_drawing =
+            0, this._polygonshrink(a)), this.is_drawing = 0, this.statusMessage(""), this.relaxArea(this.currentid), this._getLastArea()) : this.nextShape && (this.addNewArea(), this.initArea(this.currentid, this.nextShape), "poly" == this.areas[this.currentid].shape ? (this.is_drawing = this.DM_POLYGON_DRAW, this.statusMessage(this.strings.POLYGON_DRAW), this.areas[this.currentid].style.left = d + "px", this.areas[this.currentid].style.top = b + "px", this.areas[this.currentid].style.width = 0, this.areas[this.currentid].style.height = 0, this.areas[this.currentid].xpoints = [], this.areas[this.currentid].ypoints = [], this.areas[this.currentid].xpoints[0] = d, this.areas[this.currentid].ypoints[0] = b) : "rect" == this.areas[this.currentid].shape ? (this.is_drawing = this.DM_RECTANGLE_DRAW, this.statusMessage(this.strings.RECTANGLE_DRAW), this.areas[this.currentid].style.left = d + "px", this.areas[this.currentid].style.top = b + "px", this.areas[this.currentid].style.width = 0, this.areas[this.currentid].style.height = 0) : "circle" == this.areas[this.currentid].shape && (this.is_drawing = this.DM_SQUARE_DRAW,
+            this.statusMessage(""), this.areas[this.currentid].style.left = d + "px", this.areas[this.currentid].style.top = b + "px", this.areas[this.currentid].style.width = 0, this.areas[this.currentid].style.height = 0), this._setBorder(this.areas[this.currentid], "DRAW"), this.memory[this.currentid].downx = d, this.memory[this.currentid].downy = b)
+    };
+    g.prototype.highlightArea = function(a) {
+        if (!this.is_drawing && (a = this.areas[a]) && "undefined" != a.shape) this._setBorder(a, "HIGHLIGHT"), this._setopacity(a, this.config.CL_HIGHLIGHT_BG, "-" +
+            this.config.highlight_opacity), this._repaint(a, this.config.CL_HIGHLIGHT_SHAPE)
+    };
+    g.prototype.blurArea = function(a) {
+        if (!this.is_drawing && (a = this.areas[a]) && "undefined" != a.shape) this._setBorder(a, "NORM"), this._setopacity(a, this.config.CL_NORM_BG, "-" + this.config.norm_opacity), this._repaint(a, this.config.CL_NORM_SHAPE)
+    };
+    g.prototype.area_mousemove = function(a) {
+        if (this.is_drawing) this.img_mousemove(a);
+        else {
+            a || (a = c.event);
+            var b = this.isMSIE ? c.event.srcElement : a.currentTarget;
+            "DIV" == b.tagName && (b = b.parentNode);
+            if ("image" == b.tagName || "group" == b.tagName || "shape" == b.tagName || "stroke" == b.tagName) b = b.parentNode.parentNode;
+            var d = a.target || a.srcElement,
+                e = d && d.getBoundingClientRect(),
+                d = e ? a.clientX - e.left : c.event.offsetX,
+                a = e ? a.clientY - e.top : c.event.offsetY;
+            CKEDITOR.env.webkit && (d -= c.scrollX, a -= c.scrollY);
+            e = "rect" == b.shape || "circle" == b.shape;
+            b.style.cursor = e && 6 > d && 6 < a ? "w-resize" : e && d > parseInt(b.style.width, 10) - 6 && 6 < a ? "e-resize" : e && 6 < d && 6 > a ? "n-resize" : e && a > parseInt(b.style.height, 10) - 6 && 6 < d ? "s-resize" : "move";
+            if (b.aid !=
+                this.draggedId) "move" == b.style.cursor && (b.style.cursor = "default");
+            else {
+                b = this.areas[this.currentid];
+                if (6 > d && 6 < a) "circle" == b.shape ? (this.is_drawing = this.DM_SQUARE_RESIZE_LEFT, this.statusMessage("")) : "rect" == b.shape && (this.is_drawing = this.DM_RECTANGLE_RESIZE_LEFT, this.statusMessage(""));
+                else if (d > parseInt(b.style.width, 10) - 6 && 6 < a) "circle" == b.shape ? (this.is_drawing = this.DM_SQUARE_RESIZE_RIGHT, this.statusMessage("")) : "rect" == b.shape && (this.is_drawing = this.DM_RECTANGLE_RESIZE_RIGHT, this.statusMessage(""));
+                else if (6 < d && 6 > a) "circle" == b.shape ? (this.is_drawing = this.DM_SQUARE_RESIZE_TOP, this.statusMessage("")) : "rect" == b.shape && (this.is_drawing = this.DM_RECTANGLE_RESIZE_TOP, this.statusMessage(""));
+                else if (a > parseInt(b.style.height, 10) - 6 && 6 < d) "circle" == b.shape ? (this.is_drawing = this.DM_SQUARE_RESIZE_BOTTOM, this.statusMessage("")) : "rect" == b.shape && (this.is_drawing = this.DM_RECTANGLE_RESIZE_BOTTOM, this.statusMessage(""));
+                else if ("circle" == b.shape) this.is_drawing = this.DM_SQUARE_MOVE, this.statusMessage(""), this.memory[this.currentid].rdownx =
+                    d, this.memory[this.currentid].rdowny = a;
+                else if ("rect" == b.shape) this.is_drawing = this.DM_RECTANGLE_MOVE, this.statusMessage(""), this.memory[this.currentid].rdownx = d, this.memory[this.currentid].rdowny = a;
+                else if ("poly" == b.shape) {
+                    if (b.xpoints)
+                        for (var e = 0, f = b.xpoints.length; e < f; e++) this.memory[this.currentid].xpoints[e] = b.xpoints[e], this.memory[this.currentid].ypoints[e] = b.ypoints[e];
+                    this.is_drawing = this.DM_POLYGON_MOVE;
+                    this.statusMessage("");
+                    this.memory[this.currentid].rdownx = d;
+                    this.memory[this.currentid].rdowny =
+                        a
+                }
+                this.memory[this.currentid].width = parseInt(b.style.width, 10);
+                this.memory[this.currentid].height = parseInt(b.style.height, 10);
+                this.memory[this.currentid].top = parseInt(b.style.top, 10);
+                this.memory[this.currentid].left = parseInt(b.style.left, 10);
+                this._setBorder(b, "DRAW");
+                this._setopacity(b, this.config.CL_DRAW_BG, this.config.draw_opacity)
+            }
+        }
+    };
+    g.prototype.area_mouseup = function(a) {
+        if (this.is_drawing) this.img_mouseup(a);
+        else {
+            a = this.isMSIE ? c.event.srcElement : a.currentTarget;
+            "DIV" == a.tagName && (a = a.parentNode);
+            if ("image" == a.tagName || "group" == a.tagName || "shape" == a.tagName || "stroke" == a.tagName) a = a.parentNode.parentNode;
+            this.areas[this.currentid] != a && "undefined" == typeof a.aid || (this.draggedId = null)
+        }
+    };
+    g.prototype.area_mouseover = function(a) {
+        if (!this.is_drawing) {
+            a = this.isMSIE ? c.event.srcElement : a.currentTarget;
+            "DIV" == a.tagName && (a = a.parentNode);
+            if ("image" == a.tagName || "group" == a.tagName || "shape" == a.tagName || "stroke" == a.tagName) a = a.parentNode.parentNode;
+            this.highlightArea(a.aid)
+        }
+    };
+    g.prototype.area_mouseout = function(a) {
+        if (!this.is_drawing &&
+            (a || (a = c.event), !this.isMSIE || !(a.toElement && a.srcElement == a.toElement.parentNode))) {
+            var a = this.isMSIE ? a.srcElement : a.currentTarget,
+                b = a.tagName.toLowerCase();
+            "div" == b && (a = a.parentNode);
+            if ("image" == b || "group" == b || "shape" == b || "stroke" == b) a = a.parentNode.parentNode;
+            this.currentid != a.aid && this.blurArea(a.aid)
+        }
+    };
+    g.prototype.area_mousedown = function(a) {
+        if (this.is_drawing) this.img_mousedown(a);
+        else {
+            var b = this.isMSIE ? c.event.srcElement : a.currentTarget;
+            "DIV" == b.tagName && (b = b.parentNode);
+            if ("image" == b.tagName ||
+                "group" == b.tagName || "shape" == b.tagName || "stroke" == b.tagName) b = b.parentNode.parentNode;
+            if (this.areas[this.currentid] != b) {
+                if ("undefined" == typeof b.aid) return;
+                this.blurArea(this.currentid);
+                this.currentid = b.aid;
+                this.highlightArea(b.aid)
+            }
+            this.selectedId = this.draggedId = this.currentid;
+            this.fireEvent("onSelectArea", this.areas[this.currentid]);
+            this.isMSIE ? c.event.cancelBubble = !0 : a.stopPropagation()
+        }
+    };
+    g.prototype.doc_keydown = function(a) {
+        a = this.isMSIE ? event.keyCode : a.keyCode;
+        46 == a ? null !== this.selectedId && !this.is_drawing &&
+            this.removeArea(this.selectedId) : 16 == a && this.is_drawing == this.DM_RECTANGLE_DRAW && (this.is_drawing = this.DM_SQUARE_DRAW, this.statusMessage(this.strings.SQUARE2_DRAW))
+    };
+    g.prototype.doc_keyup = function(a) {
+        if (16 == (this.isMSIE ? event.keyCode : a.keyCode) && this.is_drawing == this.DM_SQUARE_DRAW && "rect" == this.areas[this.currentid].shape) this.is_drawing = this.DM_RECTANGLE_DRAW, this.statusMessage(this.strings.RECTANGLE_DRAW)
+    };
+    g.prototype.doc_mousedown = function() {
+        this.is_drawing || (this.selectedId = null)
+    };
+    g.prototype._getPos =
+        function(a) {
+            a = a.getBoundingClientRect();
+            return {
+                x: a.left,
+                y: a.top
+            }
+        };
+    g.prototype._getLastArea = function() {
+        for (var a = this.areas.length - 1; 0 <= a; a--)
+            if (this.areas[a]) return this.areas[a];
+        return null
+    };
+    g.prototype.assignCSS = function(a, b) {
+        for (var c = b.split(";"), g = 0; g < c.length; g++) {
+            for (var f = c[g].split(":"), h = e(f[0]).split("-"), k = h[0], j = 1; j < h.length; j++) k += h[j].replace(/^\w/, h[j].substring(0, 1).toUpperCase());
+            a.style[e(k)] = e(f[1])
+        }
+    };
+    g.prototype.fireEvent = function(a, b) {
+        if ("function" == typeof this.config.custom_callbacks[a]) return this.config.custom_callbacks[a](b)
+    };
+    g.prototype.setAreaSize = function(a, b, c) {
+        null === a && (a = this.currentid);
+        a = this.areas[a];
+        null !== b && (a.width = b, a.style.width = b + "px", a.setAttribute("width", b));
+        null !== c && (a.height = c, a.style.height = c + "px", a.setAttribute("height", c))
+    };
+    g.prototype.disableSelection = function(a) {
+        if ("undefined" != typeof a && a && ("undefined" != typeof a.onselectstart && (a.onselectstart = function() {
+                return !1
+            }), "undefined" != typeof a.unselectable && (a.unselectable = "on"), "undefined" != typeof a.style.MozUserSelect)) a.style.MozUserSelect = "none"
+    };
+    Function.prototype.bind2 = function(a) {
+        var b = this;
+        return function() {
+            return b.apply(a, arguments)
+        }
+    }
+})(window);
+document.createElement("canvas").getContext || function() {
+    function c() {
+        return this.context_ || (this.context_ = new k(this))
+    }
+
+    function g(a, b) {
+        var c = z.call(arguments, 2);
+        return function() {
+            return a.apply(b, c.concat(z.call(arguments)))
+        }
+    }
+
+    function e(a) {
+        var b = a.srcElement;
+        switch (a.propertyName) {
+            case "width":
+                b.style.width = b.attributes.width.nodeValue + "px";
+                b.getContext().clearRect();
+                break;
+            case "height":
+                b.style.height = b.attributes.height.nodeValue + "px", b.getContext().clearRect()
+        }
+    }
+
+    function a(a) {
+        a = a.srcElement;
+        a.firstChild &&
+            (a.firstChild.style.width = a.clientWidth + "px", a.firstChild.style.height = a.clientHeight + "px")
+    }
+
+    function b() {
+        return [
+            [1, 0, 0],
+            [0, 1, 0],
+            [0, 0, 1]
+        ]
+    }
+
+    function d(a, c) {
+        for (var d = b(), e, f, g, h = 0; 3 > h; h++)
+            for (e = 0; 3 > e; e++) {
+                for (g = f = 0; 3 > g; g++) f += a[h][g] * c[g][e];
+                d[h][e] = f
+            }
+        return d
+    }
+
+    function i(a, b) {
+        b.fillStyle = a.fillStyle;
+        b.lineCap = a.lineCap;
+        b.lineJoin = a.lineJoin;
+        b.lineWidth = a.lineWidth;
+        b.miterLimit = a.miterLimit;
+        b.shadowBlur = a.shadowBlur;
+        b.shadowColor = a.shadowColor;
+        b.shadowOffsetX = a.shadowOffsetX;
+        b.shadowOffsetY = a.shadowOffsetY;
+        b.strokeStyle = a.strokeStyle;
+        b.globalAlpha = a.globalAlpha;
+        b.arcScaleX_ = a.arcScaleX_;
+        b.arcScaleY_ = a.arcScaleY_;
+        b.lineScale_ = a.lineScale_
+    }
+
+    function f(a) {
+        var b, c = 1,
+            d;
+        if (a = "" + a, "rgb" == a.substring(0, 3)) {
+            b = a.indexOf("(", 3);
+            d = a.indexOf(")", b + 1);
+            var e = a.substring(b + 1, d).split(",");
+            b = "#";
+            for (d = 0; 3 > d; d++) b += A[Number(e[d])];
+            4 == e.length && "a" == a.substr(3, 1) && (c = e[3])
+        } else b = a;
+        return {
+            color: b,
+            alpha: c
+        }
+    }
+
+    function h(a) {
+        switch (a) {
+            case "butt":
+                return "flat";
+            case "round":
+                return "round";
+            default:
+                return "square"
+        }
+    }
+
+    function k(a) {
+        this.m_ =
+            b();
+        this.mStack_ = [];
+        this.aStack_ = [];
+        this.currentPath_ = [];
+        this.fillStyle = this.strokeStyle = "#000";
+        this.lineWidth = 1;
+        this.lineJoin = "miter";
+        this.lineCap = "butt";
+        this.miterLimit = 1 * s;
+        this.globalAlpha = 1;
+        this.canvas = a;
+        var c = a.ownerDocument.createElement("div");
+        c.style.width = a.clientWidth + "px";
+        c.style.height = a.clientHeight + "px";
+        c.style.overflow = "hidden";
+        c.style.position = "absolute";
+        a.appendChild(c);
+        this.element_ = c;
+        this.lineScale_ = this.arcScaleY_ = this.arcScaleX_ = 1
+    }
+
+    function j(a, b, c, d) {
+        a.currentPath_.push({
+            type: "bezierCurveTo",
+            cp1x: b.x,
+            cp1y: b.y,
+            cp2x: c.x,
+            cp2y: c.y,
+            x: d.x,
+            y: d.y
+        });
+        a.currentX_ = d.x;
+        a.currentY_ = d.y
+    }
+
+    function l(a, b, c) {
+        var d;
+        a: {
+            for (var e = 0; 3 > e; e++)
+                for (d = 0; 2 > d; d++)
+                    if (!isFinite(b[e][d]) || isNaN(b[e][d])) {
+                        d = !1;
+                        break a
+                    }
+            d = !0
+        }
+        if (d && (a.m_ = b, c)) a.lineScale_ = x(r(b[0][0] * b[1][1] - b[0][1] * b[1][0]))
+    }
+
+    function o(a) {
+        this.type_ = a;
+        this.r1_ = this.y1_ = this.x1_ = this.r0_ = this.y0_ = this.x0_ = 0;
+        this.colors_ = []
+    }
+
+    function q() {}
+    var p = Math,
+        m = p.round,
+        n = p.sin,
+        t = p.cos,
+        r = p.abs,
+        x = p.sqrt,
+        s = 10,
+        u = s / 2,
+        z = Array.prototype.slice,
+        v = {
+            init: function(a) {
+                /MSIE/.test(navigator.userAgent) &&
+                    !window.opera && (a = a || document, a.createElement("canvas"), "complete" !== a.readyState ? a.attachEvent("onreadystatechange", g(this.init_, this, a)) : this.init_(a))
+            },
+            init_: function(a) {
+                var b;
+                a.namespaces.g_vml_ || a.namespaces.add("g_vml_", "urn:schemas-microsoft-com:vml", "#default#VML");
+                a.namespaces.g_o_ || a.namespaces.add("g_o_", "urn:schemas-microsoft-com:office:office", "#default#VML");
+                a.styleSheets.ex_canvas_ || (b = a.createStyleSheet(), b.owningElement.id = "ex_canvas_", b.cssText = "canvas{display:inline-block;overflow:hidden;text-align:left;width:300px;height:150px}g_vml_\\:*{behavior:url(#default#VML)}g_o_\\:*{behavior:url(#default#VML)}");
+                a = a.getElementsByTagName("canvas");
+                for (b = 0; b < a.length; b++) this.initElement(a[b])
+            },
+            initElement: function(b) {
+                if (!b.getContext) {
+                    b.getContext = c;
+                    b.innerHTML = "";
+                    b.attachEvent("onpropertychange", e);
+                    b.attachEvent("onresize", a);
+                    var d = b.attributes;
+                    d.width && d.width.specified ? b.style.width = d.width.nodeValue + "px" : b.width = b.clientWidth;
+                    d.height && d.height.specified ? b.style.height = d.height.nodeValue + "px" : b.height = b.clientHeight
+                }
+                return b
+            }
+        },
+        A, y, H;
+    v.init();
+    A = [];
+    for (y = 0; 16 > y; y++)
+        for (H = 0; 16 > H; H++) A[16 * y + H] = y.toString(16) +
+            H.toString(16);
+    y = k.prototype;
+    y.clearRect = function() {
+        this.element_.innerHTML = ""
+    };
+    y.beginPath = function() {
+        this.currentPath_ = []
+    };
+    y.moveTo = function(a, b) {
+        var c = this.getCoords_(a, b);
+        this.currentPath_.push({
+            type: "moveTo",
+            x: c.x,
+            y: c.y
+        });
+        this.currentX_ = c.x;
+        this.currentY_ = c.y
+    };
+    y.lineTo = function(a, b) {
+        var c = this.getCoords_(a, b);
+        this.currentPath_.push({
+            type: "lineTo",
+            x: c.x,
+            y: c.y
+        });
+        this.currentX_ = c.x;
+        this.currentY_ = c.y
+    };
+    y.bezierCurveTo = function(a, b, c, d, e, f) {
+        e = this.getCoords_(e, f);
+        a = this.getCoords_(a, b);
+        c = this.getCoords_(c,
+            d);
+        j(this, a, c, e)
+    };
+    y.quadraticCurveTo = function(a, b, c, d) {
+        a = this.getCoords_(a, b);
+        c = this.getCoords_(c, d);
+        d = {
+            x: this.currentX_ + 2 / 3 * (a.x - this.currentX_),
+            y: this.currentY_ + 2 / 3 * (a.y - this.currentY_)
+        };
+        j(this, d, {
+            x: d.x + (c.x - this.currentX_) / 3,
+            y: d.y + (c.y - this.currentY_) / 3
+        }, c)
+    };
+    y.arc = function(a, b, c, d, e, f) {
+        var c = c * s,
+            g = f ? "at" : "wa",
+            h = a + t(d) * c - u,
+            i = b + n(d) * c - u,
+            d = a + t(e) * c - u,
+            e = b + n(e) * c - u;
+        h != d || f || (h += 0.125);
+        a = this.getCoords_(a, b);
+        h = this.getCoords_(h, i);
+        d = this.getCoords_(d, e);
+        this.currentPath_.push({
+            type: g,
+            x: a.x,
+            y: a.y,
+            radius: c,
+            xStart: h.x,
+            yStart: h.y,
+            xEnd: d.x,
+            yEnd: d.y
+        })
+    };
+    y.rect = function(a, b, c, d) {
+        this.moveTo(a, b);
+        this.lineTo(a + c, b);
+        this.lineTo(a + c, b + d);
+        this.lineTo(a, b + d);
+        this.closePath()
+    };
+    y.strokeRect = function(a, b, c, d) {
+        var e = this.currentPath_;
+        this.beginPath();
+        this.moveTo(a, b);
+        this.lineTo(a + c, b);
+        this.lineTo(a + c, b + d);
+        this.lineTo(a, b + d);
+        this.closePath();
+        this.stroke();
+        this.currentPath_ = e
+    };
+    y.fillRect = function(a, b, c, d) {
+        var e = this.currentPath_;
+        this.beginPath();
+        this.moveTo(a, b);
+        this.lineTo(a + c, b);
+        this.lineTo(a + c, b + d);
+        this.lineTo(a,
+            b + d);
+        this.closePath();
+        this.fill();
+        this.currentPath_ = e
+    };
+    y.createLinearGradient = function(a, b, c, d) {
+        var e = new o("gradient");
+        return e.x0_ = a, e.y0_ = b, e.x1_ = c, e.y1_ = d, e
+    };
+    y.createRadialGradient = function(a, b, c, d, e, f) {
+        var g = new o("gradientradial");
+        return g.x0_ = a, g.y0_ = b, g.r0_ = c, g.x1_ = d, g.y1_ = e, g.r1_ = f, g
+    };
+    y.drawImage = function(a) {
+        var b, c, d, e, f, g, h, i;
+        d = a.runtimeStyle.width;
+        e = a.runtimeStyle.height;
+        var j, k, l;
+        if (a.runtimeStyle.width = "auto", a.runtimeStyle.height = "auto", j = a.width, k = a.height, a.runtimeStyle.width = d, a.runtimeStyle.height =
+            e, 3 == arguments.length) b = arguments[1], c = arguments[2], f = g = 0, h = d = j, i = e = k;
+        else if (5 == arguments.length) b = arguments[1], c = arguments[2], d = arguments[3], e = arguments[4], f = g = 0, h = j, i = k;
+        else if (9 == arguments.length) f = arguments[1], g = arguments[2], h = arguments[3], i = arguments[4], b = arguments[5], c = arguments[6], d = arguments[7], e = arguments[8];
+        else throw Error("Invalid number of arguments");
+        var n = this.getCoords_(b, c),
+            o = [];
+        if (o.push(" <g_vml_:group", ' coordsize="', 10 * s, ",", 10 * s, '"', ' coordorigin="0,0"', ' style="width:', 10,
+                "px;height:", 10, "px;position:absolute;"), 1 != this.m_[0][0] || this.m_[0][1]) {
+            l = [];
+            l.push("M11=", this.m_[0][0], ",", "M12=", this.m_[1][0], ",", "M21=", this.m_[0][1], ",", "M22=", this.m_[1][1], ",", "Dx=", m(n.x / s), ",", "Dy=", m(n.y / s), "");
+            var q = this.getCoords_(b + d, c),
+                r = this.getCoords_(b, c + e);
+            b = this.getCoords_(b + d, c + e);
+            n.x = p.max(n.x, q.x, r.x, b.x);
+            n.y = p.max(n.y, q.y, r.y, b.y);
+            o.push("padding:0 ", m(n.x / s), "px ", m(n.y / s), "px 0;filter:progid:DXImageTransform.Microsoft.Matrix(", l.join(""), ", sizingmethod='clip');")
+        } else o.push("top:",
+            m(n.y / s), "px;left:", m(n.x / s), "px;");
+        o.push(' ">', '<g_vml_:image src="', a.src, '"', ' style="width:', s * d, "px;", " height:", s * e, 'px;"', ' cropleft="', f / j, '"', ' croptop="', g / k, '"', ' cropright="', (j - f - h) / j, '"', ' cropbottom="', (k - g - i) / k, '"', " />", "</g_vml_:group>");
+        this.element_.insertAdjacentHTML("BeforeEnd", o.join(""))
+    };
+    y.stroke = function(a) {
+        var b = [],
+            c = f(a ? this.fillStyle : this.strokeStyle),
+            d = c.color,
+            c = c.alpha * this.globalAlpha,
+            e, g, i, j;
+        b.push("<g_vml_:shape", ' filled="', !!a, '"', ' style="position:absolute;width:',
+            10, "px;height:", 10, 'px;"', ' coordorigin="0 0" coordsize="', 10 * s, " ", 10 * s, '"', ' stroked="', !a, '"', ' path="');
+        var k = j = i = null,
+            l = null;
+        for (g = 0; g < this.currentPath_.length; g++) {
+            e = this.currentPath_[g];
+            switch (e.type) {
+                case "moveTo":
+                    b.push(" m ", m(e.x), ",", m(e.y));
+                    break;
+                case "lineTo":
+                    b.push(" l ", m(e.x), ",", m(e.y));
+                    break;
+                case "close":
+                    b.push(" x ");
+                    e = null;
+                    break;
+                case "bezierCurveTo":
+                    b.push(" c ", m(e.cp1x), ",", m(e.cp1y), ",", m(e.cp2x), ",", m(e.cp2y), ",", m(e.x), ",", m(e.y));
+                    break;
+                case "at":
+                case "wa":
+                    b.push(" ", e.type,
+                        " ", m(e.x - this.arcScaleX_ * e.radius), ",", m(e.y - this.arcScaleY_ * e.radius), " ", m(e.x + this.arcScaleX_ * e.radius), ",", m(e.y + this.arcScaleY_ * e.radius), " ", m(e.xStart), ",", m(e.yStart), " ", m(e.xEnd), ",", m(e.yEnd))
+            }
+            e && ((null == i || e.x < i) && (i = e.x), (null == k || e.x > k) && (k = e.x), (null == j || e.y < j) && (j = e.y), (null == l || e.y > l) && (l = e.y))
+        }
+        if (b.push(' ">'), a)
+            if ("object" == typeof this.fillStyle) {
+                var d = this.fillStyle,
+                    n = 0;
+                e = c = a = 0;
+                var o = 1;
+                "gradient" == d.type_ ? (n = d.x1_ / this.arcScaleX_, i = d.y1_ / this.arcScaleY_, g = this.getCoords_(d.x0_ /
+                    this.arcScaleX_, d.y0_ / this.arcScaleY_), n = this.getCoords_(n, i), n = 180 * Math.atan2(n.x - g.x, n.y - g.y) / Math.PI, 0 > n && (n += 360), 1.0E-6 > n && (n = 0)) : (g = this.getCoords_(d.x0_, d.y0_), e = k - i, o = l - j, a = (g.x - i) / e, c = (g.y - j) / o, e /= this.arcScaleX_ * s, o /= this.arcScaleY_ * s, g = p.max(e, o), e = 2 * d.r0_ / g, o = 2 * d.r1_ / g - e);
+                i = d.colors_;
+                i.sort(function(a, b) {
+                    return a.offset - b.offset
+                });
+                var l = i.length,
+                    k = i[0].color,
+                    q = i[l - 1].color,
+                    r = i[0].alpha * this.globalAlpha,
+                    t = i[l - 1].alpha * this.globalAlpha,
+                    u = [];
+                for (g = 0; g < l; g++) j = i[g], u.push(j.offset * o + e + " " +
+                    j.color);
+                b.push('<g_vml_:fill type="', d.type_, '"', ' method="none" focus="100%"', ' color="', k, '"', ' color2="', q, '"', ' colors="', u.join(","), '"', ' opacity="', t, '"', ' g_o_:opacity2="', r, '"', ' angle="', n, '"', ' focusposition="', a, ",", c, '" />')
+            } else b.push('<g_vml_:fill color="', d, '" opacity="', c, '" />');
+        else a = this.lineScale_ * this.lineWidth, 1 > a && (c *= a), b.push("<g_vml_:stroke", ' opacity="', c, '"', ' joinstyle="', this.lineJoin, '"', ' miterlimit="', this.miterLimit, '"', ' endcap="', h(this.lineCap), '"', ' weight="',
+            a, 'px"', ' color="', d, '" />');
+        b.push("</g_vml_:shape>");
+        this.element_.insertAdjacentHTML("beforeEnd", b.join(""))
+    };
+    y.fill = function() {
+        this.stroke(!0)
+    };
+    y.closePath = function() {
+        this.currentPath_.push({
+            type: "close"
+        })
+    };
+    y.getCoords_ = function(a, b) {
+        var c = this.m_;
+        return {
+            x: s * (a * c[0][0] + b * c[1][0] + c[2][0]) - u,
+            y: s * (a * c[0][1] + b * c[1][1] + c[2][1]) - u
+        }
+    };
+    y.save = function() {
+        var a = {};
+        i(this, a);
+        this.aStack_.push(a);
+        this.mStack_.push(this.m_);
+        this.m_ = d(b(), this.m_)
+    };
+    y.restore = function() {
+        i(this.aStack_.pop(), this);
+        this.m_ = this.mStack_.pop()
+    };
+    y.translate = function(a, b) {
+        l(this, d([
+            [1, 0, 0],
+            [0, 1, 0],
+            [a, b, 1]
+        ], this.m_), !1)
+    };
+    y.rotate = function(a) {
+        var b = t(a),
+            a = n(a);
+        l(this, d([
+            [b, a, 0],
+            [-a, b, 0],
+            [0, 0, 1]
+        ], this.m_), !1)
+    };
+    y.scale = function(a, b) {
+        this.arcScaleX_ *= a;
+        this.arcScaleY_ *= b;
+        l(this, d([
+            [a, 0, 0],
+            [0, b, 0],
+            [0, 0, 1]
+        ], this.m_), !0)
+    };
+    y.transform = function(a, b, c, e, f, g) {
+        l(this, d([
+            [a, b, 0],
+            [c, e, 0],
+            [f, g, 1]
+        ], this.m_), !0)
+    };
+    y.setTransform = function(a, b, c, d, e, f) {
+        l(this, [
+            [a, b, 0],
+            [c, d, 0],
+            [e, f, 1]
+        ], !0)
+    };
+    y.clip = function() {};
+    y.arcTo = function() {};
+    y.createPattern = function() {
+        return new q
+    };
+    o.prototype.addColorStop = function(a, b) {
+        b = f(b);
+        this.colors_.push({
+            offset: a,
+            color: b.color,
+            alpha: b.alpha
+        })
+    };
+    G_vmlCanvasManager = v;
+    CanvasRenderingContext2D = k;
+    CanvasGradient = o;
+    CanvasPattern = q
+}();

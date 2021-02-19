@@ -1,0 +1,11 @@
+CKEDITOR.plugins.setLang('imagesfromword', 'vi', {
+    "btnUpload": "Upload lên server",
+    "btnContinue": "Tiếp tục",
+    "file": "File",
+    "instructions": "<p>You have pasted content from MS Word with images.<br>To copy the images:</p><ol style=\"margin:1em 0 1em 2em\"><li>Copy the path to the file (with  Ctrl+C or Cmd+C)</li><li>Click &quot;Add an image&quot; and paste there (with Ctrl+V or Cmd+V)<br> in the &quot;Name&quot; field and click &quot;Open&quot;.</li></ol><p>Now the image will be added to the editor.<br>If you have more images, repeat the process.</p>",
+    "of": "of",
+    "simpleClickInstructions": "<p>Có %1 ảnh cần tải lên hệ thống. <br>Sau khi bạn ấn Tiếp tục, hộp thoại chọn file sẽ hiện lên.<br> Bạn vui lòng nhấn tổ hợp phím CTRL + V sau đó ấn nút OPEN để tải ảnh.</p>",
+    "simpleClickInstructionsOne": "<p>Có 1 ảnh cần tải lên hệ thống. <br>Sau khi bạn ấn Tiếp tục, hộp thoại chọn file sẽ hiện lên.<br> Bạn vui lòng nhấn tổ hợp phím CTRL + V sau đó ấn nút OPEN để tải ảnh.</p>",
+    "simpleClickInstructionsPartial": "<p>Có tổng cộng %1 ảnh cần tải lên hệ thống, <br>vì số lượng nhièu nên phải chia ra tải làm nhiều lần, <br>lần này là tải %2 ảnh. <br>Sau đây hộp thoại chọn file sẽ hiện lên, <br>bạn hãy nhấn tổ hợp phím Ctrl + V để dán đường dẫn các file ảnh vào ô File name, <br>sau đó nhấn nút Open để tiến hành upload, <br>nếu có nhiều ảnh cần lặp lại thao tác này nhiều lần..</p>",
+    "title": "Tải ảnh xuất hiện trong câu hỏi"
+});

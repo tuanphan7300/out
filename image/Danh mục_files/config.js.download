@@ -1,0 +1,25 @@
+/**
+ * @license Copyright (c) 2003-2020, CKSource - Frederico Knabben. All rights reserved.
+ * For licensing, see https://ckeditor.com/legal/ckeditor-oss-license
+ */
+
+CKEDITOR.editorConfig = function( config ) {
+	// Define changes to default configuration here. For example:
+	// config.language = 'fr';
+	// config.uiColor = '#AADC6E';
+	config.plugins='dialog,a11yhelp,dialogadvtab,basicstyles,undo,blockquote,clipboard,colorbutton,colordialog,templates,menu,div,toolbar,entities,popup,find,floatingspace,listblock,richcombo,font,format,horizontalrule,iframe,wysiwygarea,indent,indentblock,indentlist,smiley,justify,link,list,liststyle,magicline,pastefromword,preview,print,removeformat,showborders,specialchar,table,tabletools,autogrow,eqneditor,youtube,popup,filebrowser,simpleuploads,flash,imagemaps,btgrid,widget,widgetselection,lineutils,notification,notificationaggregator,filetools,contextmenu,layoutmanager,image2,btbutton,fontawesome,widgetbootstrap,showborders,quicktable,html5video,confighelper,tableresize,sharedspace,FMathEditor,uploadwidget,imagesfromword,resize,maximize';
+	//,image2,sharedspace,showblocks,flash,ckeditor-gwf-plugin,stylesheetparser,floating-tools,,imageresize
+	config.toolbarGroups = [
+		{name:"document",groups:["mode","document","doctools","undo","find","basicstyles","backgrounds","cleanup","list","indent","blocks","align","editing","paragraph","links","styles","insert","colors","tools","others"]}
+	];
+	//config.extraPlugins = '';
+	config.allowedContent = true;
+	config.skin = 'bootstrapck';
+	//config.font_names = config.font_names+';GoogleWebFonts';
+	//config.stylesheetParser_skipSelectors = /(^body\.|caption-container|image-caption|loader)/i;
+	config.uploadUrl = config.filebrowserUploadUrl = config.filebrowserImageUploadUrl = '/3rdparty/ckfinder/core/connector/php/connector.php?command=QuickUpload&CKEditorFuncNum=2&type=Files&securityToken='+VHV.securityToken;//upload/'+VHV.site;
+	config.simpleuploads_acceptedExtensions = 'gif|jpeg|jpg|png|bmp|mp3|doc|docx|xls|xlsx|ppt|pptx|txt|pdf|avi|mpg|mp4|wma|flv|swf|asx|asf|svg|rar|zip|tgz|tar|gz';
+	config.toolbar_Mobile = [
+		[ 'Source', '-', 'Bold', 'Italic' ]
+	];
+};

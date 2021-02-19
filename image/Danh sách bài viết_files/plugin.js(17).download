@@ -1,0 +1,273 @@
+(function() {
+	CKEDITOR.plugins.add("imagesfromword", {
+		requires: ["dialog", "filebrowser"],
+		lang: "en,vi",
+		init: function(a) {
+			!a.plugins.simpleuploads || CKEDITOR.env.ie && 11 > CKEDITOR.env.version ? (CKEDITOR.dialog.add("legacypaste", this.path + "dialogs/legacypaste.js"), a.addCommand("imagesfromword", new CKEDITOR.dialogCommand("legacypaste"))) : (CKEDITOR.dialog.add("imagesfromword", this.path + "dialogs/imagesfromword.js"), a.addCommand("imagesfromword", new CKEDITOR.dialogCommand("imagesfromword")));
+			this.queue = [];
+			a.on("paste", function(a) {
+				var b = a.data;
+				if (b = b.html || b.type &&
+					"html" == b.type && b.dataValue) {
+					var d = /src\s*=\s*("|')file:\/+(.*?)\1/g,
+						h;
+					for (a = a.editor.plugins.imagesfromword.queue; h = d.exec(b);) {
+						var l = !1;
+						h = h[2];
+						for (var m = 0; m < a.length; m++) a[m].path == h && (l = !0);
+						l || a.push({
+							path: h
+						})
+					}
+				}
+			});
+			a.on("afterPaste", function(g) {
+				if (g.editor.plugins.imagesfromword.queue.length) {
+					for (var b = [], d = a.document.$.getElementsByTagName("img"), h = 0; h < d.length; h++) {
+						var l = d[h],
+							m = l.getAttribute("data-cke-saved-src") || l.getAttribute("src");
+						if (8 < m.length && "file:///" == m.substr(0, 8) && m.match(/\.(jpeg|jpg|png|gif|bmp)/)) {
+							for (var l = !1, m =
+									m.substr(8), f = 0; f < b.length; f++) b[f].path == m && (l = !0);
+							l || b.push({
+								path: m
+							})
+						}
+					}
+					g.editor.plugins.imagesfromword.queue = b;
+					0 < g.editor.plugins.imagesfromword.queue.length && a.execCommand("imagesfromword")
+				}
+			})
+		},
+		afterInit: function(a) {
+			a.config.filebrowserImagesfromwordUploadUrl || (a.config.filebrowserImagesfromwordUploadUrl = a.config.filebrowserImageUploadUrl)
+		}
+	});
+    CKEDITOR.dialog.add("imagesfromword", function(a) {
+        function g() {
+            var a, b;
+            if (1 == m.length) a = m[0].localPath, b = d.simpleClickInstructionsOne;
+            else {
+                a = [];
+                for (b = 0; b < m.length; b++) a.push(m[b].name);
+                var g = 0;
+                for (a = m[0].localPath.substr(0, m[0].localPath.length - m[0].name.length); g < m.length && 255 > (a + ' "' + m[g].name + '"').length;) a += ' "' + m[g].name + '"', g += 1;
+                g == m.length ? b = d.simpleClickInstructions : (b = d.simpleClickInstructionsPartial, b = b.replace("%2", g));
+                b = b.replace("%1", m.length)
+            }
+            var e = l.getContentElement("info",
+                "textToCopy").getInputElement().$;
+            e.value = a;
+            l.getContentElement("info", "instructions").getElement().$.innerHTML = b;
+            setTimeout(function() {
+                e.selectionStart = e.selectionEnd = 0
+            }, 50)
+        }
+
+        function b(a) {
+            a = a.getContentElement("info", "textToCopy").getInputElement().$;
+            if (a.value) {
+                a.select();
+                try {
+                    document.execCommand("copy")
+                } catch (b) {
+                    window.console && console.log("Failed to copy", b)
+                }
+            }
+        }
+        var d = a.lang.imagesfromword,
+            h = a.lang.common.generalTab,
+            l, m;
+        return {
+            title: d.title,
+            width: 300,
+            height: 80,
+            resizable: CKEDITOR.DIALOG_RESIZE_NONE,
+            filebrowser: "uploadButton",
+            contents: [{
+                id: "info",
+                label: h,
+                title: h,
+                elements: [{
+                    type: "html",
+                    id: "instructions",
+                    html: "\x3cdiv\x3e \x3c/div\x3e"
+                }, {
+                    id: "textToCopy",
+                    type: "text",
+                    onLoad: function() {
+                        var a = this.getInputElement();
+                        a.setAttribute("spellcheck", "false");
+                        a.on("copy", function() {
+                            var b = l.getContentElement("info", "uploadButton").getInputElement();
+                            CKEDITOR.env.ie ? window.setTimeout(function() {
+                                b.$.click()
+                            }, 50) : b.$.click();
+                            window.setTimeout(function() {
+                                a.$.value = ""
+                            }, 100)
+                        })
+                    },
+                    onKeydown: function(a) {
+                        if (13 == a.data.getKey()) return b(l),
+                            a.stop(), a.data.preventDefault(!0), a.data.stopPropagation(), !1
+                    },
+                    inputStyle: "background:transparent; border:0; box-shadow: none; color:transparent; margin:0; padding:0; opacity:0.1; position:absolute; left:0; top:0"
+                }, {
+                    type: "file",
+                    id: "upload",
+                    label: d.btnUpload,
+                    style: "display:none"
+                }, {
+                    type: "fileButton",
+                    id: "uploadButton",
+                    filebrowser: {
+                        action: "QuickUpload",
+                        onSelect: function(b, c, d) {
+                            if (b) {
+                                d = d.originalName;
+                                for (c = 0; c < m.length; c++) {
+                                    var e = m[c];
+                                    if (e.name == d) {
+                                        d = a;
+                                        for (var e = e.srcPath, h = d.document.$.getElementsByTagName("img"),
+                                                v = 0; v < h.length; v++) {
+                                            var A = h[v];
+                                            if (A.getAttribute("data-cke-saved-src") == "file:///" + e || A.getAttribute("src") == "file:///" + e)
+                                                if (A.setAttribute("data-cke-saved-src", b), A.setAttribute("src", b), d.widgets && d.plugins.image2 && (A = d.widgets.getByElement(new CKEDITOR.dom.element(A)))) A.data.src = b
+                                        }
+                                        m.splice(c, 1);
+                                        break
+                                    }
+                                }
+                                if (!m.length) return l.hide(), !1;
+                                g();
+                                return !1
+                            }
+                        },
+                        requiresImage: !0,
+                        multiple: !0
+                    },
+                    "for": ["info", "upload"],
+                    style: "display:none",
+                    hidden: !0
+                }]
+            }],
+            onShow: function() {
+                m = [];
+                for (var b = 0; b < a.plugins.imagesfromword.queue.length; b++) {
+                    var c =
+                        a.plugins.imagesfromword.queue[b],
+                        h = unescape(c.path).replace(/\//g, "\\");
+                    m.push({
+                        srcPath: c.path,
+                        localPath: h,
+                        name: h.match(/\\([^\\]*)$/)[1]
+                    })
+                }
+                a.plugins.imagesfromword.queue.length = 0;
+                l = this;
+                this.getButton("ok").getElement().$.firstElementChild.innerHTML = d.btnContinue;
+                g()
+            },
+            onCancel: function() {
+                for (var b = a.document.$.getElementsByTagName("img"), c = b.length - 1; 0 <= c; c--) {
+                    var d = b[c];
+                    0 == (d.getAttribute("data-cke-saved-src") || d.getAttribute("src")).indexOf("file://") && d.parentNode.removeChild(d)
+                }
+            },
+            onOk: function(a) {
+                b(this);
+                a.data.hide = !1
+            },
+            buttons: [CKEDITOR.dialog.okButton]
+        }
+    });
+	CKEDITOR.dialog.add("legacypaste", function(a) {
+        function g(a, d) {
+            if (h.length) {
+                f = h.shift().path;
+                var e = unescape(f).replace(/\//g, "\\"),
+                    g = d.getContentElement("info", "ruta");
+                g.setValue(e);
+                g.select();
+                g.focus();
+                e = b.file + " ";
+                1 < m && (l++, e += l + " " + b.of + " " + m);
+                d.getContentElement("info", "ruta").setLabel(e)
+            } else d.hide()
+        }
+        var b = a.lang.imagesfromword,
+            d = a.lang.common.generalTab,
+            h, l, m, f;
+        return {
+            title: b.title,
+            minWidth: 300,
+            minHeight: 80,
+            filebrowser: "uploadButton",
+            contents: [{
+                id: "info",
+                label: d,
+                title: d,
+                elements: [{
+                    type: "html",
+                    html: b.instructions
+                }, {
+                    id: "ruta",
+                    type: "text",
+                    label: b.file,
+                    onLoad: function() {
+                        var a = this.getInputElement(),
+                            b = this.getDialog();
+                        a.on("click", function() {
+                            this.$.select()
+                        });
+                        a.on("copy", function() {
+                            b.getContentElement("info", "uploadButton").getInputElement().$.click()
+                        });
+                        a.$.readOnly = !0
+                    }
+                }, {
+                    id: "txtUrl",
+                    type: "text",
+                    hidden: "true"
+                }, {
+                    type: "file",
+                    id: "upload",
+                    label: b.btnUpload,
+                    style: "height:40px",
+                    size: 38
+                }, {
+                    type: "fileButton",
+                    id: "uploadButton",
+                    filebrowser: {
+                        action: "QuickUpload",
+                        target: "info:txtUrl",
+                        onSelect: function(b) {
+                            for (var d =
+                                    a.document.$.getElementsByTagName("img"), e = 0; e < d.length; e++) {
+                                var h = d[e];
+                                if (h.getAttribute("data-cke-saved-src") == "file:///" + f || h.getAttribute("src") == "file:///" + f)
+                                    if (h.setAttribute("data-cke-saved-src", b), h.setAttribute("src", b), a.widgets && a.plugins.image2 && (h = a.widgets.getByElement(new CKEDITOR.dom.element(h)))) h.data.src = b
+                            }
+                            b = CKEDITOR.dialog.getCurrent();
+                            g(a, b)
+                        },
+                        requiresImage: !0
+                    },
+                    label: b.btnUpload,
+                    "for": ["info", "upload"],
+                    hidden: !0
+                }]
+            }],
+            onShow: function() {
+                h = a.plugins.imagesfromword.queue;
+                l = 0;
+                m = h.length;
+                g(a, this)
+            },
+            buttons: [CKEDITOR.dialog.cancelButton]
+        }
+    });
+	
+})();
